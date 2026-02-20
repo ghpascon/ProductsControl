@@ -1,0 +1,101 @@
+{# Combobox reutilizável com busca. Parâmetros: ref_name — nome único para x-ref
+do input de busca (ex: "ptSearch") model — expressão Alpine para o valor
+selecionado (ex: "form.product_type_id") items_fn — expressão JS que retorna o
+array de opções (ex: "() => productTypes") label_fn — arrow function JS que
+converte um item em string (ex: "pt => pt.id + ' — ' + pt.name") value_key —
+chave do item usada como valor (default: "id") placeholder — texto exibido
+quando nada está selecionado (default: "Selecione...") Exemplo de uso: {% from
+"includes/_combobox.html" import combobox %} {{ combobox("ptSearch",
+"form.product_type_id", "() => productTypes", "pt => pt.id + ' — ' + pt.name",
+"id", "Selecione um produto") }} #} {% macro combobox(ref_name, model, items_fn,
+label_fn, value_key="id", placeholder="Selecione...") %}
+<script>
+  if (!window._comboboxDefined) {
+    window._comboboxDefined = true;
+    window.combobox = function (getItems, labelFn, valueKey) {
+      valueKey = valueKey || "id";
+      return {
+        open: false,
+        search: "",
+        labelFn: labelFn,
+        get filtered() {
+          return getItems().filter((item) =>
+            labelFn(item).toLowerCase().includes(this.search.toLowerCase()),
+          );
+        },
+        selectedLabel(val) {
+          if (val === "" || val === null || val === undefined) return null;
+          const item = getItems().find((i) => i[valueKey] == val);
+          return item ? labelFn(item) : null;
+        },
+      };
+    };
+  }
+</script>
+<div
+  x-data="combobox({{ items_fn }}, {{ label_fn }}, '{{ value_key }}')"
+  @keydown.escape="open = false"
+  @click.away="open = false"
+  class="relative"
+>
+  <button
+    type="button"
+    @click="open = !open; if (open) $nextTick(() => $refs.{{ ref_name }}.focus())"
+    class="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-left focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+  >
+    <span
+      :class="({{ model }} !== '' && {{ model }} !== null && {{ model }} !== undefined) ? 'text-slate-800' : 'text-slate-400'"
+      x-text="selectedLabel({{ model }}) ?? '— {{ placeholder }} —'"
+    ></span>
+    <svg
+      class="w-4 h-4 text-slate-400 shrink-0"
+      :style="open ? 'transform:rotate(180deg)' : 'transform:rotate(0deg)'"
+      style="transition: transform 0.15s"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M19 9l-7 7-7-7"
+      />
+    </svg>
+  </button>
+
+  <div
+    x-show="open"
+    x-transition:enter="transition ease-out duration-100"
+    x-transition:enter-start="opacity-0 -translate-y-1"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    class="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden"
+  >
+    <div class="p-2 border-b border-slate-100">
+      <input
+        x-ref="{{ ref_name }}"
+        x-model="search"
+        type="text"
+        placeholder="Buscar..."
+        class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+      />
+    </div>
+    <ul class="max-h-52 overflow-y-auto py-1">
+      <template x-for="item in filtered" :key="item.{{ value_key }}">
+        <li
+          @click="{{ model }} = item.{{ value_key }}; open = false; search = ''"
+          :class="item.{{ value_key }} == {{ model }} ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700 hover:bg-slate-50'"
+          class="px-3 py-2 text-sm cursor-pointer"
+          x-text="labelFn(item)"
+        ></li>
+      </template>
+      <li
+        x-show="filtered.length === 0"
+        class="px-3 py-2 text-sm text-slate-400 italic"
+      >
+        Nenhum resultado
+      </li>
+    </ul>
+  </div>
+</div>
+{% endmacro %}

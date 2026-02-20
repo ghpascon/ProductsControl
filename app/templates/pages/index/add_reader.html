@@ -1,0 +1,256 @@
+{% extends "base.html" %} {% block content %}
+<script>
+  const ADD_READER_URLS = {
+    getReaderTypes: "{{ url_for('get_reader_types') }}",
+    addReader: "{{ url_for('add_reader') }}",
+    backUrl: "{{ url_for('index') }}",
+  };
+</script>
+
+<div class="min-h-screen p-6" x-data="addReaderForm()" x-init="init()">
+  <div
+    class="max-w-2xl mx-auto bg-white/90 border border-slate-200 rounded-2xl shadow-sm p-8"
+  >
+    <!-- Sucesso -->
+    <div
+      x-show="success"
+      x-transition
+      class="mb-6 flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 text-sm"
+    >
+      <svg
+        class="w-5 h-5 shrink-0 mt-0.5 text-emerald-500"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <div>
+        <p class="font-semibold">Leitor adicionado com sucesso!</p>
+        <p class="mt-0.5 text-emerald-600" x-text="successMsg"></p>
+      </div>
+    </div>
+
+    <!-- Erro -->
+    <div
+      x-show="error"
+      x-transition
+      class="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 text-sm"
+    >
+      <svg
+        class="w-5 h-5 shrink-0 mt-0.5 text-red-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <p x-text="error"></p>
+    </div>
+
+    <form @submit.prevent="submit()" class="space-y-6" x-show="!success">
+      <!-- Tipo de Leitor -->
+      <div>
+        <label
+          class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5"
+        >
+          Tipo de Leitor <span class="text-red-400">*</span>
+        </label>
+        <div
+          x-show="loadingTypes"
+          class="flex items-center gap-2 text-sm text-slate-400 py-2"
+        >
+          <svg
+            class="w-4 h-4 animate-spin"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          Carregando tipos...
+        </div>
+        <div
+          x-show="!loadingTypes && readerTypes.length === 0"
+          class="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5"
+        >
+          Nenhum tipo de leitor cadastrado.
+          <a
+            href="{{ url_for('add_reader_type_page') }}"
+            class="underline font-medium"
+            >Criar tipo</a
+          >
+        </div>
+        <div x-show="!loadingTypes && readerTypes.length > 0">
+          {{ combobox("rtSearch", "form.reader_type_id", "() => readerTypes",
+          "rt => rt.id + ' \u2014 ' + rt.name", "id", "Selecione um tipo") }}
+        </div>
+      </div>
+
+      <!-- Número de Série -->
+      <div>
+        <label
+          class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5"
+        >
+          Número de Série <span class="text-red-400">*</span>
+        </label>
+        <input
+          type="text"
+          x-model="form.serial_number"
+          placeholder="ex: 001122abc"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+        />
+      </div>
+
+      <!-- Hostname -->
+      <div>
+        <label
+          class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5"
+        >
+          Hostname
+          <span class="text-slate-300 font-normal normal-case">(opcional)</span>
+        </label>
+        <input
+          type="text"
+          x-model="form.hostname"
+          placeholder="ex: reader-hostname"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+        />
+      </div>
+
+      <!-- Botões -->
+      <div class="flex items-center gap-3 pt-2">
+        <button
+          type="submit"
+          :disabled="submitting || !isValid"
+          class="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+        >
+          <svg
+            x-show="submitting"
+            class="w-4 h-4 animate-spin"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          <span
+            x-text="submitting ? 'Adicionando...' : 'Adicionar Leitor'"
+          ></span>
+        </button>
+        <a
+          href="{{ url_for('index') }}"
+          class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
+          >Cancelar</a
+        >
+      </div>
+    </form>
+
+    <!-- Após sucesso -->
+    <div x-show="success" x-transition class="flex gap-3 mt-6">
+      <a
+        href="{{ url_for('index') }}"
+        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all"
+        >Ver Pedidos</a
+      >
+      <button
+        @click="reset()"
+        class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
+      >
+        Adicionar Outro
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function addReaderForm() {
+    return {
+      form: { reader_type_id: "", serial_number: "", hostname: "" },
+      readerTypes: [],
+      loadingTypes: true,
+      submitting: false,
+      success: false,
+      successMsg: "",
+      error: "",
+
+      async init() {
+        await this.loadReaderTypes();
+      },
+
+      async loadReaderTypes() {
+        this.loadingTypes = true;
+        try {
+          const res = await fetch(ADD_READER_URLS.getReaderTypes);
+          if (res.ok) this.readerTypes = await res.json();
+        } catch (_) {
+          this.readerTypes = [];
+        } finally {
+          this.loadingTypes = false;
+        }
+      },
+
+      get isValid() {
+        return this.form.reader_type_id && this.form.serial_number.trim();
+      },
+
+      async submit() {
+        this.error = "";
+        this.submitting = true;
+        try {
+          const body = {
+            reader_type_id: parseInt(this.form.reader_type_id),
+            serial_number: this.form.serial_number.trim(),
+          };
+          if (this.form.hostname.trim())
+            body.hostname = this.form.hostname.trim();
+          const res = await fetch(ADD_READER_URLS.addReader, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            this.error =
+              data.message ?? data.error ?? "Erro ao adicionar leitor.";
+          } else {
+            this.success = true;
+            this.successMsg = data.message ?? "";
+          }
+        } catch (e) {
+          this.error = `Erro inesperado: ${e.message}`;
+        } finally {
+          this.submitting = false;
+        }
+      },
+
+      reset() {
+        this.form = { reader_type_id: "", serial_number: "", hostname: "" };
+        this.success = false;
+        this.successMsg = "";
+        this.error = "";
+      },
+    };
+  }
+</script>
+{% endblock %}

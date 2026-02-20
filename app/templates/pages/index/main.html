@@ -1,0 +1,764 @@
+{% extends "base.html" %} {% block content %}
+<!-- Main Layout Container -->
+<!-- Painel de Pedidos -->
+<script>
+  const API_URLS = {
+    getAllDecoded: "{{ url_for('get_decoded_orders') }}",
+    getDecodedByIds:
+      "{{ url_for('get_decoded_orders_by_ids', order_ids='__IDS__') }}",
+    getDecodedById: "{{ url_for('get_decoded_order', order_id=0) }}".replace(
+      "/0",
+      "/__ID__",
+    ),
+    filterByClient:
+      "{{ url_for('get_product_orders_by_client', customer_id='__ID__') }}",
+    filterByProductType:
+      "{{ url_for('get_product_orders_by_product_type', product_type_id='__ID__') }}",
+    filterByDate:
+      "{{ url_for('get_product_orders_by_date', start_date='__START__', end_date='__END__') }}",
+    getCustomers: "{{ url_for('get_customers') }}",
+    getProductTypes: "{{ url_for('get_product_types') }}",
+    viewOrder: "{{ url_for('view_order_page', order_id=0) }}".replace(
+      "/0",
+      "/__ID__",
+    ),
+  };
+</script>
+
+<div class="min-h-screen p-6" x-data="orderPanel()" x-init="init()">
+  <!-- Cabeçalho -->
+  <div
+    class="max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+  >
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Pedidos</h1>
+    </div>
+    <button
+      @click="applyFilter()"
+      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-sm transition-all"
+    >
+      <svg
+        :class="loading && 'animate-spin'"
+        class="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+        />
+      </svg>
+      <span x-text="loading ? 'Carregando...' : 'Atualizar'"></span>
+    </button>
+  </div>
+
+  <!-- Barra de Filtros -->
+  <div
+    class="max-w-7xl mx-auto mb-6 bg-white/80 border border-slate-200 rounded-2xl shadow-sm p-5"
+  >
+    <div class="flex flex-wrap gap-2 mb-4">
+      <template x-for="tab in filterTabs" :key="tab.key">
+        <button
+          @click="activeFilter = tab.key; resetFilterFields()"
+          :class="activeFilter === tab.key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+          class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+          x-text="tab.label"
+        ></button>
+      </template>
+    </div>
+
+    <!-- Por ID -->
+    <div
+      x-show="activeFilter === 'id'"
+      x-transition
+      class="flex flex-wrap items-end gap-3"
+    >
+      <div class="flex-1 min-w-[160px]">
+        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
+          >ID do Pedido</label
+        >
+        <input
+          type="number"
+          x-model="filter.orderId"
+          placeholder="ex: 42"
+          min="1"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+          @keydown.enter="applyFilter()"
+        />
+      </div>
+      <button
+        @click="applyFilter()"
+        :disabled="!filter.orderId"
+        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+      >
+        Buscar
+      </button>
+    </div>
+
+    <!-- Por Cliente -->
+    <div
+      x-show="activeFilter === 'cliente'"
+      x-transition
+      class="flex flex-wrap items-end gap-3"
+    >
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
+          >Cliente</label
+        >
+        {{ combobox("clientSearch", "filter.customerId", "() => customers", "c
+        => c.ID + ' \u2014 ' + (c.NAME ?? 'Desconhecido')", "ID", "Selecione um
+        cliente") }}
+      </div>
+      <button
+        @click="applyFilter()"
+        :disabled="!filter.customerId"
+        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+      >
+        Filtrar
+      </button>
+    </div>
+
+    <!-- Por Produto -->
+    <div
+      x-show="activeFilter === 'tipo'"
+      x-transition
+      class="flex flex-wrap items-end gap-3"
+    >
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
+          >Produto</label
+        >
+        {{ combobox("typeSearch", "filter.productTypeId", "() => productTypes",
+        "pt => pt.id + ' \u2014 ' + pt.name", "id", "Selecione um produto") }}
+      </div>
+      <button
+        @click="applyFilter()"
+        :disabled="!filter.productTypeId"
+        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+      >
+        Filtrar
+      </button>
+    </div>
+
+    <!-- Por Data -->
+    <div
+      x-show="activeFilter === 'data'"
+      x-transition
+      class="flex flex-wrap items-end gap-3"
+    >
+      <div class="flex-1 min-w-[160px]">
+        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
+          >Data Inicial</label
+        >
+        <input
+          type="date"
+          x-model="filter.startDate"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+      <div class="flex-1 min-w-[160px]">
+        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
+          >Data Final</label
+        >
+        <input
+          type="date"
+          x-model="filter.endDate"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+      <button
+        @click="applyFilter()"
+        :disabled="!filter.startDate || !filter.endDate"
+        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+      >
+        Filtrar
+      </button>
+    </div>
+
+    <!-- Todos -->
+    <div
+      x-show="activeFilter === 'todos'"
+      class="text-sm text-slate-400 italic"
+    >
+      Exibindo todos os pedidos — use as abas acima para filtrar.
+    </div>
+
+    <p
+      x-show="error"
+      x-text="error"
+      class="mt-3 text-sm text-red-500 font-medium"
+    ></p>
+  </div>
+
+  <!-- Stats -->
+  <div
+    class="max-w-7xl mx-auto mb-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+  >
+    <template x-for="stat in stats" :key="stat.label">
+      <div
+        class="bg-white/80 border border-slate-200 rounded-xl p-4 shadow-sm flex items-center gap-3"
+      >
+        <div
+          :class="stat.color"
+          class="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              :d="stat.icon"
+            />
+          </svg>
+        </div>
+        <div>
+          <p class="text-s text-slate-500 font-medium" x-text="stat.label"></p>
+          <p class="text-lg font-bold text-slate-800" x-text="stat.value"></p>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Filtro de Status -->
+  <div class="max-w-7xl mx-auto mb-4 flex flex-wrap items-center gap-2">
+    <span class="text-xs font-bold text-slate-400 uppercase tracking-wide mr-1"
+      >Status:</span
+    >
+    <template x-for="s in statusTabs" :key="s.key">
+      <button
+        @click="statusFilter = s.key"
+        :class="statusFilter === s.key ? s.activeClass : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+        class="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+        x-text="s.label"
+      ></button>
+    </template>
+  </div>
+
+  <!-- Grid de Pedidos -->
+  <div class="max-w-7xl mx-auto">
+    <!-- Skeleton -->
+    <div
+      x-show="loading"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+    >
+      <template x-for="i in 6" :key="i">
+        <div
+          class="bg-white/80 border border-slate-200 rounded-2xl p-5 shadow-sm animate-pulse"
+        >
+          <div class="h-4 bg-slate-200 rounded w-1/3 mb-3"></div>
+          <div class="h-3 bg-slate-100 rounded w-2/3 mb-2"></div>
+          <div class="h-3 bg-slate-100 rounded w-1/2 mb-4"></div>
+          <div class="flex gap-2">
+            <div class="h-6 w-16 bg-slate-200 rounded-full"></div>
+            <div class="h-6 w-16 bg-slate-200 rounded-full"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Vazio: sem pedidos na API -->
+    <div
+      x-show="!loading && orders.length === 0"
+      class="flex flex-col items-center justify-center py-20 text-slate-400"
+    >
+      <svg
+        class="w-14 h-14 mb-4 opacity-30"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+        />
+      </svg>
+      <p class="text-base font-medium">Nenhum pedido encontrado</p>
+      <p class="text-sm mt-1">Tente ajustar os filtros ou atualize a página.</p>
+    </div>
+
+    <!-- Vazio: pedidos existem mas filtro de status zerou -->
+    <div
+      x-show="!loading && orders.length > 0 && filteredOrders.length === 0"
+      class="flex flex-col items-center justify-center py-16 text-slate-400"
+    >
+      <svg
+        class="w-10 h-10 mb-3 opacity-30"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+        />
+      </svg>
+      <p class="text-sm font-medium">Nenhum pedido com este status</p>
+      <button
+        @click="statusFilter = ''"
+        class="mt-2 text-xs text-blue-500 hover:underline"
+      >
+        Limpar filtro de status
+      </button>
+    </div>
+
+    <!-- Tabela de Pedidos -->
+    <div
+      x-show="!loading && filteredOrders.length > 0"
+      class="overflow-x-auto bg-white/90 border border-slate-200 rounded-2xl shadow-sm"
+    >
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr
+            class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+          >
+            <th class="px-4 py-3 text-left font-bold">Id</th>
+            <th class="px-4 py-3 text-left font-bold">Cliente</th>
+            <th class="px-4 py-3 text-left font-bold">Produto</th>
+            <th class="px-4 py-3 text-left font-bold w-16">Versão</th>
+            <th class="px-4 py-3 text-left font-bold">Leitor</th>
+            <th class="px-4 py-3 text-left font-bold">Serial</th>
+            <th class="px-4 py-3 text-left font-bold">Hostname</th>
+            <th class="px-4 py-3 text-left font-bold w-24">Criado</th>
+            <th class="px-4 py-3 text-left font-bold w-24">Montado</th>
+            <th class="px-4 py-3 text-left font-bold w-24">Testado</th>
+            <th class="px-4 py-3 text-left font-bold w-24">Enviado</th>
+            <th class="px-4 py-3 text-left font-bold w-24">Ativado</th>
+            <th class="px-4 py-3 text-right font-bold w-28">Status</th>
+            <th class="px-4 py-3 w-10"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="order in filteredOrders" :key="order.id">
+            <tr
+              @click="window.location.href = API_URLS.viewOrder.replace('__ID__', order.id)"
+              class="border-b border-slate-100 last:border-0 hover:bg-blue-50/50 cursor-pointer transition-colors duration-150"
+            >
+              <td
+                class="px-4 py-3 font-semibold text-slate-800"
+                x-text="order.id || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 font-semibold text-slate-800"
+                x-text="order.client_name || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 text-slate-600"
+                x-text="order.product_type_name || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 text-s font-mono text-slate-500 whitespace-nowrap"
+                x-text="order.version || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 text-s text-slate-600"
+                x-text="order.reader_type_name || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 text-s font-mono text-slate-400"
+                x-text="order.reader_serial || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 text-s text-slate-600"
+                x-text="order.reader_hostname || '—'"
+              ></td>
+              <td
+                class="px-4 py-3 text-s text-slate-400 whitespace-nowrap"
+                x-text="formatDate(order.created_at)"
+              ></td>
+              <td
+                class="px-4 py-3 text-s whitespace-nowrap"
+                :class="order.mounted_at ? 'text-blue-600 font-medium' : 'text-slate-300'"
+                x-text="formatDate(order.mounted_at)"
+              ></td>
+              <td
+                class="px-4 py-3 text-s whitespace-nowrap"
+                :class="order.tested_at ? 'text-cyan-600 font-medium' : 'text-slate-300'"
+                x-text="formatDate(order.tested_at)"
+              ></td>
+              <td
+                class="px-4 py-3 text-s whitespace-nowrap"
+                :class="order.shipped_at ? 'text-indigo-600 font-medium' : 'text-slate-300'"
+                x-text="formatDate(order.shipped_at)"
+              ></td>
+              <td
+                class="px-4 py-3 text-s whitespace-nowrap"
+                :class="order.activated_at ? 'text-emerald-600 font-medium' : 'text-slate-300'"
+                x-text="formatDate(order.activated_at)"
+              ></td>
+              <td class="px-4 py-3 text-right">
+                <span
+                  :class="statusBadgeClass(order)"
+                  class="text-s font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                  x-text="statusLabel(order)"
+                ></span>
+              </td>
+              <td class="px-4 py-3 text-slate-300">
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  function orderPanel() {
+    return {
+      orders: [],
+      customers: [],
+      productTypes: [],
+      loading: true,
+      error: "",
+      activeFilter: "todos",
+      statusFilter: "",
+      filter: {
+        orderId: "",
+        customerId: "",
+        productTypeId: "",
+        startDate: "",
+        endDate: "",
+      },
+      filterTabs: [
+        { key: "todos", label: "Todos" },
+        { key: "id", label: "Por ID" },
+        { key: "cliente", label: "Por Cliente" },
+        { key: "tipo", label: "Por Produto" },
+        { key: "data", label: "Por Data" },
+      ],
+      statusTabs: [
+        { key: "", label: "Todos", activeClass: "bg-slate-700 text-white" },
+        {
+          key: "pendente",
+          label: "Pendente",
+          activeClass: "bg-amber-100 text-amber-700 ring-1 ring-amber-300",
+        },
+        {
+          key: "montado",
+          label: "Montado",
+          activeClass: "bg-blue-100 text-blue-700 ring-1 ring-blue-300",
+        },
+        {
+          key: "testado",
+          label: "Testado",
+          activeClass: "bg-cyan-100 text-cyan-700 ring-1 ring-cyan-300",
+        },
+        {
+          key: "enviado",
+          label: "Enviado",
+          activeClass: "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300",
+        },
+        {
+          key: "ativado",
+          label: "Ativado",
+          activeClass:
+            "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300",
+        },
+      ],
+
+      async init() {
+        await Promise.all([
+          this.loadOrders(),
+          this.loadCustomers(),
+          this.loadProductTypes(),
+        ]);
+      },
+
+      resetFilterFields() {
+        this.filter = {
+          orderId: "",
+          customerId: "",
+          productTypeId: "",
+          startDate: "",
+          endDate: "",
+        };
+        this.error = "";
+        if (this.activeFilter === "todos") this.loadOrders();
+      },
+
+      async applyFilter() {
+        this.error = "";
+        if (this.activeFilter === "todos") return this.loadOrders();
+        if (this.activeFilter === "id") {
+          if (!this.filter.orderId) {
+            this.error = "Informe um ID.";
+            return;
+          }
+          return this.loadOrderById(this.filter.orderId);
+        }
+        if (this.activeFilter === "cliente") {
+          if (!this.filter.customerId) {
+            this.error = "Selecione um cliente.";
+            return;
+          }
+          return this.loadOrdersByClient(this.filter.customerId);
+        }
+        if (this.activeFilter === "tipo") {
+          if (!this.filter.productTypeId) {
+            this.error = "Selecione um tipo de produto.";
+            return;
+          }
+          return this.loadOrdersByProductType(this.filter.productTypeId);
+        }
+        if (this.activeFilter === "data") {
+          if (!this.filter.startDate || !this.filter.endDate) {
+            this.error = "Preencha as duas datas.";
+            return;
+          }
+          return this.loadOrdersByDate(
+            this.filter.startDate,
+            this.filter.endDate,
+          );
+        }
+      },
+
+      async loadOrderById(orderId) {
+        this.loading = true;
+        try {
+          const res = await fetch(
+            API_URLS.getDecodedById.replace("__ID__", orderId),
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const order = await res.json();
+          this.orders = order && order.id ? [order] : [];
+          if (this.orders.length === 0)
+            this.error = `Pedido #${orderId} não encontrado.`;
+        } catch (e) {
+          this.error = `Erro ao buscar pedido: ${e.message}`;
+          this.orders = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async loadOrders() {
+        this.loading = true;
+        try {
+          const res = await fetch(API_URLS.getAllDecoded);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          this.orders = await res.json();
+        } catch (e) {
+          this.error = `Erro ao carregar pedidos: ${e.message}`;
+          this.orders = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByClient(customerId) {
+        this.loading = true;
+        try {
+          const res = await fetch(
+            API_URLS.filterByClient.replace("__ID__", customerId),
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await this.fetchDecodedByList(await res.json());
+        } catch (e) {
+          this.error = `Erro ao filtrar por cliente: ${e.message}`;
+          this.orders = [];
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByProductType(productTypeId) {
+        this.loading = true;
+        try {
+          const res = await fetch(
+            API_URLS.filterByProductType.replace("__ID__", productTypeId),
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await this.fetchDecodedByList(await res.json());
+        } catch (e) {
+          this.error = `Erro ao filtrar por tipo: ${e.message}`;
+          this.orders = [];
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByDate(startDate, endDate) {
+        this.loading = true;
+        try {
+          // date input gives "YYYY-MM-DD"; enviar início e fim do dia
+          const url = API_URLS.filterByDate
+            .replace(
+              "__START__",
+              encodeURIComponent(
+                new Date(startDate + "T00:00:00").toISOString(),
+              ),
+            )
+            .replace(
+              "__END__",
+              encodeURIComponent(new Date(endDate + "T23:59:59").toISOString()),
+            );
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await this.fetchDecodedByList(await res.json());
+        } catch (e) {
+          this.error = `Erro ao filtrar por data: ${e.message}`;
+          this.orders = [];
+          this.loading = false;
+        }
+      },
+
+      async fetchDecodedByList(data) {
+        if (!Array.isArray(data) || data.length === 0) {
+          this.orders = [];
+          this.loading = false;
+          return;
+        }
+        const ids = data.map((item) =>
+          typeof item === "object" && item !== null ? item.id : item,
+        );
+        const res = await fetch(
+          API_URLS.getDecodedByIds.replace("__IDS__", ids.join(",")),
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        this.orders = await res.json();
+        this.loading = false;
+      },
+
+      async loadCustomers() {
+        try {
+          const res = await fetch(API_URLS.getCustomers);
+          if (res.ok) this.customers = await res.json();
+        } catch (_) {}
+      },
+
+      async loadProductTypes() {
+        try {
+          const res = await fetch(API_URLS.getProductTypes);
+          if (res.ok) this.productTypes = await res.json();
+        } catch (_) {}
+      },
+
+      get stats() {
+        const s = this.orders;
+        const ativado = (o) => !!o.activated_at;
+        const enviado = (o) => !o.activated_at && !!o.shipped_at;
+        const testado = (o) =>
+          !o.activated_at && !o.shipped_at && !!o.tested_at;
+        const montado = (o) =>
+          !o.activated_at && !o.shipped_at && !o.tested_at && !!o.mounted_at;
+        const pendente = (o) =>
+          !o.activated_at && !o.shipped_at && !o.tested_at && !o.mounted_at;
+        return [
+          {
+            label: "Total",
+            value: s.length,
+            color: "bg-slate-500",
+            icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
+          },
+          {
+            label: "Pendentes",
+            value: s.filter(pendente).length,
+            color: "bg-amber-500",
+            icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+          },
+          {
+            label: "Montados",
+            value: s.filter(montado).length,
+            color: "bg-blue-500",
+            icon: "M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z",
+          },
+          {
+            label: "Testados",
+            value: s.filter(testado).length,
+            color: "bg-cyan-500",
+            icon: "M9 12l2 2 4-4M7 4a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H7z",
+          },
+          {
+            label: "Enviados",
+            value: s.filter(enviado).length,
+            color: "bg-indigo-500",
+            icon: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4",
+          },
+          {
+            label: "Ativados",
+            value: s.filter(ativado).length,
+            color: "bg-emerald-500",
+            icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+          },
+        ];
+      },
+
+      get filteredOrders() {
+        if (!this.statusFilter) return this.orders;
+        return this.orders.filter((o) => {
+          if (this.statusFilter === "ativado") return !!o.activated_at;
+          if (this.statusFilter === "enviado")
+            return !o.activated_at && !!o.shipped_at;
+          if (this.statusFilter === "testado")
+            return !o.activated_at && !o.shipped_at && !!o.tested_at;
+          if (this.statusFilter === "montado")
+            return (
+              !o.activated_at && !o.shipped_at && !o.tested_at && !!o.mounted_at
+            );
+          if (this.statusFilter === "pendente")
+            return (
+              !o.activated_at && !o.shipped_at && !o.tested_at && !o.mounted_at
+            );
+          return true;
+        });
+      },
+
+      statusLabel(order) {
+        if (order.activated_at) return "Ativado";
+        if (order.shipped_at) return "Enviado";
+        if (order.tested_at) return "Testado";
+        if (order.mounted_at) return "Montado";
+        return "Pendente";
+      },
+
+      statusBadgeClass(order) {
+        if (order.activated_at)
+          return "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200";
+        if (order.shipped_at)
+          return "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200";
+        if (order.tested_at)
+          return "bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200";
+        if (order.mounted_at)
+          return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
+        return "bg-amber-100 text-amber-700 ring-1 ring-amber-200";
+      },
+
+      formatDate(value) {
+        if (!value) return "—";
+        try {
+          return new Intl.DateTimeFormat("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }).format(new Date(value));
+        } catch (_) {
+          return value;
+        }
+      },
+    };
+  }
+</script>
+{% endblock %}

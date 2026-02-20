@@ -1,0 +1,187 @@
+{% extends "base.html" %} {% block content %}
+<script>
+  const ADD_READER_TYPE_URLS = {
+    addReaderType: "{{ url_for('add_reader_type') }}",
+    backUrl: "{{ url_for('index') }}",
+  };
+</script>
+
+<div class="min-h-screen p-6" x-data="addReaderTypeForm()" x-init="init()">
+  <div
+    class="max-w-2xl mx-auto bg-white/90 border border-slate-200 rounded-2xl shadow-sm p-8"
+  >
+    <!-- Sucesso -->
+    <div
+      x-show="success"
+      x-transition
+      class="mb-6 flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 text-sm"
+    >
+      <svg
+        class="w-5 h-5 shrink-0 mt-0.5 text-emerald-500"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <div>
+        <p class="font-semibold">Tipo de leitor criado com sucesso!</p>
+        <p class="mt-0.5 text-emerald-600" x-text="successMsg"></p>
+      </div>
+    </div>
+
+    <!-- Erro -->
+    <div
+      x-show="error"
+      x-transition
+      class="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 text-sm"
+    >
+      <svg
+        class="w-5 h-5 shrink-0 mt-0.5 text-red-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <p x-text="error"></p>
+    </div>
+
+    <form @submit.prevent="submit()" class="space-y-6" x-show="!success">
+      <!-- Nome -->
+      <div>
+        <label
+          class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5"
+        >
+          Nome <span class="text-red-400">*</span>
+        </label>
+        <input
+          type="text"
+          x-model="form.name"
+          placeholder="ex: R700"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+        />
+      </div>
+
+      <!-- Descrição -->
+      <div>
+        <label
+          class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5"
+        >
+          Descrição
+          <span class="text-slate-300 font-normal normal-case">(opcional)</span>
+        </label>
+        <textarea
+          x-model="form.description"
+          rows="3"
+          placeholder="Descrição do tipo de leitor..."
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Botões -->
+      <div class="flex items-center gap-3 pt-2">
+        <button
+          type="submit"
+          :disabled="submitting || !form.name.trim()"
+          class="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+        >
+          <svg
+            x-show="submitting"
+            class="w-4 h-4 animate-spin"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          <span x-text="submitting ? 'Criando...' : 'Criar Tipo'"></span>
+        </button>
+        <a
+          href="{{ url_for('index') }}"
+          class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
+          >Cancelar</a
+        >
+      </div>
+    </form>
+
+    <!-- Após sucesso -->
+    <div x-show="success" x-transition class="flex gap-3 mt-6">
+      <a
+        href="{{ url_for('index') }}"
+        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all"
+        >Ver Pedidos</a
+      >
+      <button
+        @click="reset()"
+        class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
+      >
+        Criar Outro
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function addReaderTypeForm() {
+    return {
+      form: { name: "", description: "" },
+      submitting: false,
+      success: false,
+      successMsg: "",
+      error: "",
+
+      init() {},
+
+      async submit() {
+        this.error = "";
+        this.submitting = true;
+        try {
+          const body = { name: this.form.name.trim() };
+          if (this.form.description.trim())
+            body.description = this.form.description.trim();
+          const res = await fetch(ADD_READER_TYPE_URLS.addReaderType, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            this.error =
+              data.message ?? data.error ?? "Erro ao criar tipo de leitor.";
+          } else {
+            this.success = true;
+            this.successMsg = data.message ?? "";
+          }
+        } catch (e) {
+          this.error = `Erro inesperado: ${e.message}`;
+        } finally {
+          this.submitting = false;
+        }
+      },
+
+      reset() {
+        this.form = { name: "", description: "" };
+        this.success = false;
+        this.successMsg = "";
+        this.error = "";
+      },
+    };
+  }
+</script>
+{% endblock %}
