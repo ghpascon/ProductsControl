@@ -22,3 +22,15 @@ async def get_customers():
 )
 async def get_customer(customer_id: int):
 	return JSONResponse(content=controller.db_manager.get_customer(customer_id))
+
+
+@router.post(
+	'/add_customer/{customer_name}',
+	summary='Add a new customer',
+)
+async def add_customer(customer_name: str):
+	success, data = controller.db_manager.add_customer(customer_name)
+	if success:
+		return JSONResponse(content=data)
+	else:
+		return JSONResponse(content={'message': 'Failed to add customer'}, status_code=400)

@@ -18,9 +18,51 @@ class Controller:
 			logging.info('Starting synchronization with Omie...')
 			omie_clients = self.omie_api.get_all_clients()
 			omie_products = self.omie_api.get_all_products()
-			omie_products_codes = [
-				p.get('codigo') for p in omie_products if p.get('codigo') is not None
-			]
+			logging.info(
+				f'Fetched {len(omie_clients)} clients and {len(omie_products)} products from Omie.'
+			)
+
+			logging.info('Fetching existing customers and products from the database...')
+			db_customers = self.db_manager.get_customers()
+			db_customers_names = [c.get('NAME') for c in db_customers]
+			db_products = self.db_manager.get_product_types()
+			logging.info(
+				f'Fetched {len(db_customers)} customers and {len(db_products)} products from the database.'
+			)
+			# Insert clients that don't exist yet
+			to_insert_clients = [c for c in omie_clients if c not in db_customers_names]
+			logging.info(f'{len(to_insert_clients)} clients to insert into the database.')
+			for client in to_insert_clients:
+				self.db_manager.add_customer(client)
+
+			to_insert_products = []
+			to_update_products = []
+
+			for product in omie_products:
+				existing = next(
+					(p for p in db_products if p.get('name') == product.get('codigo')), None
+				)
+				if existing:
+					if existing.get('description') != product.get('descricao'):
+						# Update only if description changed
+						self.db_manager.update_product_type(
+							product_type_id=existing.get('id'),
+							description=product.get('descricao'),
+						)
+						to_update_products.append(product)
+				else:
+					# Insert new product
+					self.db_manager.add_product_type(
+						name=product.get('codigo'),
+						description=product.get('descricao'),
+					)
+					to_insert_products.append(product)
+
+			return True, {
+				'to_insert_clients': len(to_insert_clients),
+				'to_insert_products': len(to_insert_products),
+				'to_update_products': len(to_update_products),
+			}
 
 		except Exception as e:
 			logging.error(f'Error fetching clients from Omie: {e}')

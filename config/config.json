@@ -1,7 +1,8 @@
 {
-  "TITLE": "Gerenciador de Produtos - SMARTX",
+  "TITLE": "Gerenciador de Produtos",
   "LOG_PATH": "C:/Users/DELL/Desktop/Logs",
-  "DATABASE_URL": "mysql+pymysql://smartx:smartx@192.168.1.200:3303/smartx_teste",
+  "_DATABASE_URL": "mysql+pymysql://smartx:smartx@192.168.1.200:3303/smartx_teste",
+  "DATABASE_URL": "mysql+pymysql://root:admin@localhost:3306/orders",
   "PORT": 8000,
   "STORAGE_DAYS": 7,
   "APP_KEY": "1318987347678",

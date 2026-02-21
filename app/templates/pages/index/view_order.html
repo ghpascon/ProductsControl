@@ -518,24 +518,16 @@
           const res = await fetch(VIEW_ORDER_URLS[action], { method: "PUT" });
           const data = await res.json();
           if (!res.ok) {
-            this.showFeedback(data.error ?? "Erro ao executar a ação.", false);
+            showAlert(data.error ?? "Erro ao executar a ação.", "error");
           } else {
-            this.showFeedback(data.message ?? "Sucesso!", true);
+            showAlert(data.message ?? "Sucesso!", "success");
             await this.load();
           }
         } catch (e) {
-          this.showFeedback(`Erro inesperado: ${e.message}`, false);
+          showAlert(`Erro inesperado: ${e.message}`, "error");
         } finally {
           this.acting = false;
         }
-      },
-
-      showFeedback(msg, ok) {
-        this.feedback = { msg, ok };
-        clearTimeout(this._feedbackTimer);
-        this._feedbackTimer = setTimeout(() => {
-          this.feedback = { msg: "", ok: true };
-        }, 4000);
       },
 
       async openReaderPicker() {
@@ -578,13 +570,13 @@
           const res = await fetch(url, { method: "POST" });
           const data = await res.json();
           if (!res.ok) {
-            this.showFeedback(data.error ?? "Erro ao vincular leitor.", false);
+            showAlert(data.error ?? "Erro ao vincular leitor.", "error");
           } else {
-            this.showFeedback(data.message ?? "Leitor vinculado!", true);
+            showAlert(data.message ?? "Leitor vinculado!", "success");
             await this.load();
           }
         } catch (e) {
-          this.showFeedback(`Erro inesperado: ${e.message}`, false);
+          showAlert(`Erro inesperado: ${e.message}`, "error");
         } finally {
           this.acting = false;
           this.selectedReaderId = "";

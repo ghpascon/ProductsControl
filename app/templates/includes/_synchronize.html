@@ -1,0 +1,203 @@
+<!-- Synchronize Button + Modal -->
+<script>
+  function synchronizeComponent(url) {
+    return {
+      open: false,
+      loading: false,
+      success: null,
+      error: null,
+      result: null,
+      async sincronize() {
+        this.open = true;
+        this.loading = true;
+        this.success = null;
+        this.error = null;
+        this.result = null;
+        try {
+          const resp = await fetch(url, { method: "POST" });
+          const data = await resp.json();
+          if (resp.ok) {
+            this.success = true;
+            this.result = data;
+          } else {
+            this.success = false;
+            this.error = data.message || "Erro desconhecido.";
+          }
+        } catch (e) {
+          this.success = false;
+          this.error = e.message || "Erro ao conectar com o servidor.";
+        } finally {
+          this.loading = false;
+        }
+      },
+    };
+  }
+</script>
+
+<div x-data="synchronizeComponent('{{ url_for('sincronize_omie') }}')">
+  <!-- Button -->
+  <button
+    @click="sincronize()"
+    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition-colors duration-200"
+  >
+    <svg
+      class="w-4 h-4"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M4 4v5h.582M20 20v-5h-.581M4.582 9A8 8 0 0119.419 15M19.419 9A8 8 0 014.582 15"
+      />
+    </svg>
+    Sincronizar
+  </button>
+
+  <!-- Modal Backdrop -->
+  <div
+    x-show="open"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    style="display: none"
+  >
+    <!-- Modal Box -->
+    <div
+      x-transition:enter="transition ease-out duration-200"
+      x-transition:enter-start="opacity-0 scale-95"
+      x-transition:enter-end="opacity-100 scale-100"
+      x-transition:leave="transition ease-in duration-150"
+      x-transition:leave-start="opacity-100 scale-100"
+      x-transition:leave-end="opacity-0 scale-95"
+      class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4 text-center"
+    >
+      <!-- Loading State -->
+      <template x-if="loading">
+        <div class="flex flex-col items-center gap-4">
+          <svg
+            class="w-12 h-12 text-blue-500 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+            />
+          </svg>
+          <p class="text-gray-700 font-medium text-lg">
+            Sincronizando com Omie...
+          </p>
+          <p class="text-gray-400 text-sm">
+            Aguarde, isso pode levar alguns segundos.
+          </p>
+        </div>
+      </template>
+
+      <!-- Success State -->
+      <template x-if="!loading && success">
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center"
+          >
+            <svg
+              class="w-7 h-7 text-emerald-600"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <p class="text-gray-800 font-semibold text-lg">
+            Sincronização concluída!
+          </p>
+          <div
+            class="w-full bg-gray-50 rounded-xl p-4 text-left text-sm text-gray-600 space-y-1"
+          >
+            <div class="flex justify-between">
+              <span>Clientes inseridos:</span>
+              <span
+                class="font-medium text-gray-800"
+                x-text="result.to_insert_clients"
+              ></span>
+            </div>
+            <div class="flex justify-between">
+              <span>Produtos inseridos:</span>
+              <span
+                class="font-medium text-gray-800"
+                x-text="result.to_insert_products"
+              ></span>
+            </div>
+            <div class="flex justify-between">
+              <span>Produtos atualizados:</span>
+              <span
+                class="font-medium text-gray-800"
+                x-text="result.to_update_products"
+              ></span>
+            </div>
+          </div>
+          <button
+            @click="open = false"
+            class="mt-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+          >
+            Fechar
+          </button>
+        </div>
+      </template>
+
+      <!-- Error State -->
+      <template x-if="!loading && success === false">
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center"
+          >
+            <svg
+              class="w-7 h-7 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+          <p class="text-gray-800 font-semibold text-lg">
+            Erro na sincronização
+          </p>
+          <p class="text-red-500 text-sm break-words" x-text="error"></p>
+          <button
+            @click="open = false"
+            class="mt-2 px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+          >
+            Fechar
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
