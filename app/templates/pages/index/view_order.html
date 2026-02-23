@@ -20,27 +20,6 @@
 
 <div class="min-h-screen p-6" x-data="viewOrder()" x-init="init()">
   <div class="max-w-3xl mx-auto space-y-5">
-    <!-- Voltar -->
-    <a
-      href="{{ url_for('index') }}"
-      class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
-    >
-      <svg
-        class="w-4 h-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M15 19l-7-7 7-7"
-        />
-      </svg>
-      Voltar
-    </a>
-
     <!-- Toast de feedback -->
     <div
       x-show="feedback.msg"
@@ -225,6 +204,11 @@
                   :class="step.done ? 'text-slate-500' : 'text-slate-300'"
                   class="text-[10px] mt-0.5 text-center font-mono"
                   x-text="step.date ? formatDate(step.date) : '\u2014'"
+                ></p>
+                <p
+                  x-show="step.done && step.by"
+                  class="text-[10px] mt-0.5 text-center text-slate-500 font-mono"
+                  x-text="step.by ? 'Por: ' + step.by : ''"
                 ></p>
               </div>
             </template>
@@ -621,6 +605,7 @@
             key: "pendente",
             label: "Criado",
             date: o.created_at,
+            by: o.created_by_username,
             done: true,
             current: false,
             icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
@@ -629,6 +614,7 @@
             key: "montado",
             label: "Montado",
             date: o.mounted_at,
+            by: o.mounted_by_username,
             done: !!o.mounted_at,
             current: !o.mounted_at,
             icon: "M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z",
@@ -637,6 +623,7 @@
             key: "testado",
             label: "Testado",
             date: o.tested_at,
+            by: o.tested_by_username,
             done: !!o.tested_at,
             current: !!o.mounted_at && !o.tested_at,
             icon: "M9 12l2 2 4-4M7 4a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H7z",
@@ -645,6 +632,7 @@
             key: "enviado",
             label: "Enviado",
             date: o.shipped_at,
+            by: o.shipped_by_username,
             done: !!o.shipped_at,
             current: !!o.tested_at && !o.shipped_at,
             icon: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4",
@@ -653,6 +641,7 @@
             key: "ativado",
             label: "Ativado",
             date: o.activated_at,
+            by: o.activated_by_username,
             done: !!o.activated_at,
             current: !!o.shipped_at && !o.activated_at,
             icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
@@ -667,6 +656,9 @@
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
           }).format(new Date(value));
         } catch (_) {
           return value;

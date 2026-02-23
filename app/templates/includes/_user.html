@@ -1,0 +1,210 @@
+{% if user is not none %}
+
+<div class="text-center">
+  <span
+    class="block text-sm text-gray-700 cursor-pointer border border-gray-300 rounded px-2 py-1 hover:bg-gray-100"
+    onclick="toggleUserModal()"
+  >
+    <strong>{{ user.username }}</strong>
+  </span>
+</div>
+
+<!-- Pass user.id to JavaScript -->
+<script>
+  const CURRENT_USER_ID = {{ user.user_id if user.user_id is not none else 'null' }};
+</script>
+
+<!-- User Modal -->
+<div
+  id="userModal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden"
+>
+  <div class="bg-white rounded-lg shadow-lg p-6 w-80">
+    <h2 class="text-lg font-bold mb-4">Usuário Logado</h2>
+
+    <p class="text-sm text-gray-700 mb-4">
+      <strong>Usuário:</strong> {{ user.username }}
+    </p>
+
+    <button
+      class="w-full px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 mt-4"
+      onclick="togglePasswordModal()"
+    >
+      Alterar Senha
+    </button>
+
+    <form
+      method="post"
+      action="{{ url_for('logout') }}"
+      onsubmit="handleLogout(event)"
+    >
+      <button
+        type="submit"
+        class="w-full px-4 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 mt-4"
+      >
+        Logout
+      </button>
+    </form>
+
+    <button
+      class="mt-4 w-full px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+      onclick="toggleUserModal()"
+    >
+      Fechar
+    </button>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div
+  id="passwordModal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden"
+>
+  <div class="bg-white rounded-lg shadow-lg p-6 w-80">
+    <h2 class="text-lg font-bold mb-4">Alterar Senha</h2>
+
+    <form
+      onsubmit="return handlePasswordChange(event);"
+      id="changePasswordForm"
+    >
+      <div class="relative">
+        <input
+          type="password"
+          id="newPassword"
+          name="new_password"
+          placeholder="Nova senha"
+          class="w-full px-3 py-2 border border-gray-300 rounded mb-4"
+          required
+        />
+        <button
+          type="button"
+          class="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+          onclick="togglePasswordVisibility('newPassword')"
+        >
+          👀
+        </button>
+      </div>
+
+      <button
+        type="submit"
+        class="w-full px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+      >
+        Confirmar
+      </button>
+    </form>
+
+    <div id="passwordError" class="text-red-500 text-sm mt-2 hidden"></div>
+    <div id="passwordResponse" class="text-sm mt-2 hidden p-3 rounded"></div>
+
+    <button
+      class="mt-4 w-full px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+      onclick="togglePasswordModal()"
+    >
+      Fechar
+    </button>
+  </div>
+</div>
+
+<script>
+  function toggleUserModal() {
+    document.getElementById("userModal").classList.toggle("hidden");
+  }
+
+  function togglePasswordModal() {
+    document.getElementById("passwordModal").classList.toggle("hidden");
+  }
+
+  function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    input.type = input.type === "password" ? "text" : "password";
+  }
+
+  async function handleLogout(event) {
+    event.preventDefault();
+
+    try {
+      await fetch("{{ url_for('logout') }}", {
+        method: "POST",
+      });
+    } catch (error) {
+      alert("Erro ao fazer logout.");
+    }
+
+    window.location.replace("{{ url_for('auth') }}");
+  }
+
+  async function handlePasswordChange(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const formData = new FormData(form);
+    const newPassword = formData.get("new_password");
+    const errorDiv = document.getElementById("passwordError");
+    const responseDiv = document.getElementById("passwordResponse");
+
+    errorDiv.classList.add("hidden");
+    errorDiv.textContent = "";
+    responseDiv.classList.add("hidden");
+    responseDiv.textContent = "";
+    responseDiv.classList.remove(
+      "text-green-500",
+      "bg-green-100",
+      "border",
+      "border-green-500",
+      "text-red-500",
+      "bg-red-100",
+      "border",
+      "border-red-500",
+    );
+
+    if (!newPassword || newPassword.trim() === "") {
+      errorDiv.textContent = "A nova senha não pode estar vazia.";
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/v1/auth/change_password/${CURRENT_USER_ID}/${encodeURIComponent(newPassword)}`,
+        {
+          method: "PUT",
+        },
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        responseDiv.textContent =
+          result.message || "Senha alterada com sucesso!";
+        responseDiv.classList.remove("hidden");
+        responseDiv.classList.add(
+          "text-green-500",
+          "bg-green-100",
+          "border",
+          "border-green-500",
+        );
+        form.reset();
+      } else {
+        const errorData = await response.json();
+        responseDiv.textContent = errorData.error || "Erro ao alterar a senha.";
+        responseDiv.classList.remove("hidden");
+        responseDiv.classList.add(
+          "text-red-500",
+          "bg-red-100",
+          "border",
+          "border-red-500",
+        );
+      }
+    } catch (error) {
+      responseDiv.textContent = `Erro ao conectar com o servidor. ${error.message}`;
+      responseDiv.classList.remove("hidden");
+      responseDiv.classList.add(
+        "text-red-500",
+        "bg-red-100",
+        "border",
+        "border-red-500",
+      );
+    }
+  }
+</script>
+
+{% endif %}

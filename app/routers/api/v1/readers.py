@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from smartx_rfid.utils.path import get_prefix_from_path
 from app.schemas.controller import AddType, AddReader
 from app.services.controller import controller
 import logging
+from app.core import validate_role
 
 router_prefix = get_prefix_from_path(__file__)
 router = APIRouter(prefix=router_prefix, tags=[router_prefix])
@@ -30,7 +31,12 @@ async def get_reader_type(reader_type_id: int):
 	'/add_reader_type',
 	summary='Add a new reader type',
 )
-async def add_reader_type(reader_type: AddType):
+async def add_reader_type(request: Request, reader_type: AddType):
+	if not validate_role(request, ['admin', 'dev']):
+		return JSONResponse(
+			content={'error': 'Forbidden: You do not have permission to add reader types'},
+			status_code=403,
+		)
 	success, message = controller.db_manager.add_reader_type(**reader_type.model_dump())
 	if success:
 		logging.info(f'{message}')
@@ -44,7 +50,12 @@ async def add_reader_type(reader_type: AddType):
 	'/update_reader_type/{reader_type_id}',
 	summary='Update a reader type by ID',
 )
-async def update_reader_type(reader_type_id: int, reader_type: AddType):
+async def update_reader_type(request: Request, reader_type_id: int, reader_type: AddType):
+	if not validate_role(request, ['admin', 'dev']):
+		return JSONResponse(
+			content={'error': 'Forbidden: You do not have permission to update reader types'},
+			status_code=403,
+		)
 	success, message = controller.db_manager.update_reader_type(
 		reader_type_id, **reader_type.model_dump()
 	)
@@ -60,7 +71,12 @@ async def update_reader_type(reader_type_id: int, reader_type: AddType):
 	'/delete_reader_type/{reader_type_id}',
 	summary='Delete a reader type by ID',
 )
-async def delete_reader_type(reader_type_id: int):
+async def delete_reader_type(request: Request, reader_type_id: int):
+	if not validate_role(request, ['admin', 'dev']):
+		return JSONResponse(
+			content={'error': 'Forbidden: You do not have permission to delete reader types'},
+			status_code=403,
+		)
 	success, message = controller.db_manager.delete_reader_type(reader_type_id)
 	if success:
 		logging.info(f'reader_type_id={reader_type_id} | {message}')

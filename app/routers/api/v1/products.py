@@ -5,6 +5,7 @@ from app.schemas.controller import AddType
 from app.services.controller import controller
 import logging
 
+
 router_prefix = get_prefix_from_path(__file__)
 router = APIRouter(prefix=router_prefix, tags=[router_prefix])
 

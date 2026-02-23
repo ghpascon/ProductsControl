@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.core import settings, templates
+from app.core import settings, templates, get_user, validate_role
 
 router = APIRouter(prefix='', tags=['Pages'])
 
@@ -11,13 +11,15 @@ router = APIRouter(prefix='', tags=['Pages'])
 async def index(request: Request):
 	return templates.TemplateResponse(
 		'pages/index/main.html',
-		{'request': request, 'title': settings.TITLE},
+		{'request': request, 'title': settings.TITLE, 'user': get_user(request)},
 		media_type='text/html; charset=utf-8',
 	)
 
 
 @router.get('/docs', response_class=HTMLResponse)
-async def docs():
+async def docs(request: Request):
+	if not validate_role(request, ['admin', 'dev']):
+		return RedirectResponse(url=request.url_for('index'))
 	return get_swagger_ui_html(
 		openapi_url='/openapi.json',
 		title=settings.TITLE + ' - Docs',
@@ -32,7 +34,7 @@ async def docs():
 async def add_reader_page(request: Request):
 	return templates.TemplateResponse(
 		'pages/index/add_reader.html',
-		{'request': request, 'title': 'Adicionar Leitor'},
+		{'request': request, 'title': 'Adicionar Leitor', 'user': get_user(request)},
 		media_type='text/html; charset=utf-8',
 	)
 
@@ -41,16 +43,7 @@ async def add_reader_page(request: Request):
 async def add_order_page(request: Request):
 	return templates.TemplateResponse(
 		'pages/index/add_order.html',
-		{'request': request, 'title': 'Criar Pedido'},
-		media_type='text/html; charset=utf-8',
-	)
-
-
-@router.get('/add_product_type_page', response_class=HTMLResponse)
-async def add_product_type_page(request: Request):
-	return templates.TemplateResponse(
-		'pages/index/add_product_type.html',
-		{'request': request, 'title': 'Adicionar Tipo de Produto'},
+		{'request': request, 'title': 'Criar Pedido', 'user': get_user(request)},
 		media_type='text/html; charset=utf-8',
 	)
 
@@ -59,7 +52,7 @@ async def add_product_type_page(request: Request):
 async def add_reader_type_page(request: Request):
 	return templates.TemplateResponse(
 		'pages/index/add_reader_type.html',
-		{'request': request, 'title': 'Adicionar Tipo de Leitor'},
+		{'request': request, 'title': 'Adicionar Tipo de Leitor', 'user': get_user(request)},
 		media_type='text/html; charset=utf-8',
 	)
 
@@ -68,6 +61,11 @@ async def add_reader_type_page(request: Request):
 async def view_order_page(request: Request, order_id: int):
 	return templates.TemplateResponse(
 		'pages/index/view_order.html',
-		{'request': request, 'title': f'Visualizar Pedido {order_id}', 'order_id': order_id},
+		{
+			'request': request,
+			'title': f'Visualizar Pedido {order_id}',
+			'order_id': order_id,
+			'user': get_user(request),
+		},
 		media_type='text/html; charset=utf-8',
 	)

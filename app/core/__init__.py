@@ -6,6 +6,7 @@ from .indicator import Indicator
 from smartx_rfid.utils.path import get_frozen_path
 from smartx_rfid.utils import AlertsManager
 from app.db import setup_database
+from .user import get_user, validate_role
 
 # DEFAULT VARS
 FILES_PATH = get_frozen_path('config')

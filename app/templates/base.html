@@ -21,7 +21,8 @@
     class="bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800 min-h-screen flex flex-col"
   >
     <!-- Fixed Header -->
-    {% include "includes/header.html" %}
+    {% if include_header is not defined or include_header %} {% include
+    "includes/header.html" %} {% endif %}
 
     <!-- Alerts System -->
     {% include "includes/alerts.html" %} {% include "includes/_has_changes.html"
@@ -32,6 +33,7 @@
     <main>{% block content %}{% endblock %}</main>
 
     <!-- Fixed Footer -->
-    {% include "includes/footer.html" %}
+    {% if include_header is not defined or include_header %} {% include
+    "includes/footer.html" %} {% endif %}
   </body>
 </html>

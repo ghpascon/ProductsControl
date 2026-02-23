@@ -26,171 +26,176 @@
 </script>
 
 <div class="min-h-screen p-6" x-data="orderPanel()" x-init="init()">
-  <!-- Cabeçalho -->
-  <div
-    class="max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-  >
-    <div>
-      <h1 class="text-2xl font-bold text-slate-800">Pedidos</h1>
-    </div>
-    <button
-      @click="applyFilter()"
-      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-sm transition-all"
-    >
-      <svg
-        :class="loading && 'animate-spin'"
-        class="w-4 h-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-        />
-      </svg>
-      <span x-text="loading ? 'Carregando...' : 'Atualizar'"></span>
-    </button>
-  </div>
-
-  <!-- Barra de Filtros -->
+  <!-- Barra de Filtros e Botão de Atualizar -->
   <div
     class="max-w-7xl mx-auto mb-6 bg-white/80 border border-slate-200 rounded-2xl shadow-sm p-5"
   >
-    <div class="flex flex-wrap gap-2 mb-4">
-      <template x-for="tab in filterTabs" :key="tab.key">
+    <div class="flex justify-between items-center mb-4">
+      <!-- Div dos Filtros -->
+      <div class="flex flex-wrap gap-2">
+        <template x-for="tab in filterTabs" :key="tab.key">
+          <button
+            @click="activeFilter = tab.key; resetFilterFields()"
+            :class="activeFilter === tab.key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+            class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+            x-text="tab.label"
+          ></button>
+        </template>
+      </div>
+
+      <!-- Botão de Atualizar -->
+      <button
+        @click="applyFilter()"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-sm transition-all"
+      >
+        <svg
+          :class="loading && 'animate-spin'"
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
+        </svg>
+        <span x-text="loading ? 'Carregando...' : 'Atualizar'"></span>
+      </button>
+    </div>
+
+    <!-- Conteúdo do Card -->
+    <div class="flex flex-wrap items-end gap-3">
+      <!-- Por ID -->
+      <div
+        x-show="activeFilter === 'id'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
+      >
+        <div class="flex-1 min-w-[160px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >ID do Pedido</label
+          >
+          <input
+            type="number"
+            x-model="filter.orderId"
+            placeholder="ex: 42"
+            min="1"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+            @keydown.enter="applyFilter()"
+          />
+        </div>
         <button
-          @click="activeFilter = tab.key; resetFilterFields()"
-          :class="activeFilter === tab.key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-          class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
-          x-text="tab.label"
-        ></button>
-      </template>
-    </div>
-
-    <!-- Por ID -->
-    <div
-      x-show="activeFilter === 'id'"
-      x-transition
-      class="flex flex-wrap items-end gap-3"
-    >
-      <div class="flex-1 min-w-[160px]">
-        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
-          >ID do Pedido</label
+          @click="applyFilter()"
+          :disabled="!filter.orderId"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
         >
-        <input
-          type="number"
-          x-model="filter.orderId"
-          placeholder="ex: 42"
-          min="1"
-          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
-          @keydown.enter="applyFilter()"
-        />
+          Buscar
+        </button>
       </div>
-      <button
-        @click="applyFilter()"
-        :disabled="!filter.orderId"
-        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+
+      <!-- Por Cliente -->
+      <div
+        x-show="activeFilter === 'cliente'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
       >
-        Buscar
-      </button>
-    </div>
-
-    <!-- Por Cliente -->
-    <div
-      x-show="activeFilter === 'cliente'"
-      x-transition
-      class="flex flex-wrap items-end gap-3"
-    >
-      <div class="flex-1 min-w-[200px]">
-        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
-          >Cliente</label
+        <div class="flex-1 min-w-[200px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Cliente</label
+          >
+          {{ combobox("clientSearch", "filter.ClientId", "() => customers", "c
+          => c.ID + ' \u2014 ' + (c.NAME ?? 'Desconhecido')", "ID", "Selecione
+          um \ cliente") }}
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.ClientId"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
         >
-        {{ combobox("clientSearch", "filter.customerId", "() => customers", "c
-        => c.ID + ' \u2014 ' + (c.NAME ?? 'Desconhecido')", "ID", "Selecione um
-        cliente") }}
+          Filtrar
+        </button>
       </div>
-      <button
-        @click="applyFilter()"
-        :disabled="!filter.customerId"
-        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+
+      <!-- Por Produto -->
+      <div
+        x-show="activeFilter === 'tipo'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
       >
-        Filtrar
-      </button>
-    </div>
-
-    <!-- Por Produto -->
-    <div
-      x-show="activeFilter === 'tipo'"
-      x-transition
-      class="flex flex-wrap items-end gap-3"
-    >
-      <div class="flex-1 min-w-[200px]">
-        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
-          >Produto</label
+        <div class="flex-1 min-w-[200px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Produto</label
+          >
+          {{ combobox("typeSearch", "filter.productTypeId", "() =>
+          productTypes", "pt => pt.id + ' \u2014 ' + pt.name", "id", "Selecione
+          um produto") }}
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.productTypeId"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
         >
-        {{ combobox("typeSearch", "filter.productTypeId", "() => productTypes",
-        "pt => pt.id + ' \u2014 ' + pt.name", "id", "Selecione um produto") }}
+          Filtrar
+        </button>
       </div>
-      <button
-        @click="applyFilter()"
-        :disabled="!filter.productTypeId"
-        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+
+      <!-- Por Data -->
+      <div
+        x-show="activeFilter === 'data'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
       >
-        Filtrar
-      </button>
-    </div>
+        <div class="flex-1 min-w-[160px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Data Inicial</label
+          >
+          <input
+            type="date"
+            x-model="filter.startDate"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <div class="flex-1 min-w-[160px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Data Final</label
+          >
+          <input
+            type="date"
+            x-model="filter.endDate"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.startDate || !filter.endDate"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+        >
+          Filtrar
+        </button>
+      </div>
 
-    <!-- Por Data -->
-    <div
-      x-show="activeFilter === 'data'"
-      x-transition
-      class="flex flex-wrap items-end gap-3"
-    >
-      <div class="flex-1 min-w-[160px]">
-        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
-          >Data Inicial</label
-        >
-        <input
-          type="date"
-          x-model="filter.startDate"
-          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-      </div>
-      <div class="flex-1 min-w-[160px]">
-        <label class="block text-s font-semibold text-slate-500 uppercase mb-1"
-          >Data Final</label
-        >
-        <input
-          type="date"
-          x-model="filter.endDate"
-          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-      </div>
-      <button
-        @click="applyFilter()"
-        :disabled="!filter.startDate || !filter.endDate"
-        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+      <!-- Todos -->
+      <div
+        x-show="activeFilter === 'todos'"
+        class="text-sm text-slate-400 italic"
       >
-        Filtrar
-      </button>
-    </div>
+        Exibindo todos os pedidos — use as abas acima para filtrar.
+      </div>
 
-    <!-- Todos -->
-    <div
-      x-show="activeFilter === 'todos'"
-      class="text-sm text-slate-400 italic"
-    >
-      Exibindo todos os pedidos — use as abas acima para filtrar.
+      <p
+        x-show="error"
+        x-text="error"
+        class="mt-3 text-sm text-red-500 font-medium"
+      ></p>
     </div>
-
-    <p
-      x-show="error"
-      x-text="error"
-      class="mt-3 text-sm text-red-500 font-medium"
-    ></p>
   </div>
 
   <!-- Stats -->
@@ -439,7 +444,7 @@
       statusFilter: "",
       filter: {
         orderId: "",
-        customerId: "",
+        ClientId: "",
         productTypeId: "",
         startDate: "",
         endDate: "",
@@ -492,7 +497,7 @@
       resetFilterFields() {
         this.filter = {
           orderId: "",
-          customerId: "",
+          ClientId: "",
           productTypeId: "",
           startDate: "",
           endDate: "",
@@ -512,11 +517,11 @@
           return this.loadOrderById(this.filter.orderId);
         }
         if (this.activeFilter === "cliente") {
-          if (!this.filter.customerId) {
+          if (!this.filter.ClientId) {
             this.error = "Selecione um cliente.";
             return;
           }
-          return this.loadOrdersByClient(this.filter.customerId);
+          return this.loadOrdersByClient(this.filter.ClientId);
         }
         if (this.activeFilter === "tipo") {
           if (!this.filter.productTypeId) {
@@ -570,11 +575,11 @@
         }
       },
 
-      async loadOrdersByClient(customerId) {
+      async loadOrdersByClient(ClientId) {
         this.loading = true;
         try {
           const res = await fetch(
-            API_URLS.filterByClient.replace("__ID__", customerId),
+            API_URLS.filterByClient.replace("__ID__", ClientId),
           );
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           await this.fetchDecodedByList(await res.json());

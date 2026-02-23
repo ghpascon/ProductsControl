@@ -30,6 +30,7 @@ except ImportError:
 EXTERNAL_MODEL_MODULES: List[str] = [
 	'smartx_rfid.models',  # imports Base, BaseMixin, etc.
 	'smartx_rfid.models.products',  # imports ProductsOrders, ProductsType, ReadersType …
+	'smartx_rfid.models.users',
 ]
 
 
