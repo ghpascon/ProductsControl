@@ -12,58 +12,49 @@ class Controller:
 			raise ValueError('APP_KEY and APP_SECRET must be set in the configuration.')
 		self.omie_api = ApiOmie(app_key=settings.APP_KEY, app_secret=settings.APP_SECRET)
 
-	def sincronize_omie(self):
+	async def sincronize_omie(self):
 		# Synchronize all data with Omie
 		try:
-			logging.info('Starting synchronization with Omie...')
-			omie_clients = self.omie_api.get_all_clients()
-			omie_products = self.omie_api.get_all_products()
+			result = await self.omie_api.get_all_orders()
+			success = result.get('success', False)
+			total_items = result.get('total_items', 0)
+			orders = result.get('orders', [])
+			orders_db = self.db_manager.get_product_orders()
+			orders_db_dict = {order.get('order_number'): order for order in orders_db}
+			to_insert = []
+			errors = []
+			for order in orders:
+				order_db = orders_db_dict.get(order.get('numero_pedido'))
+				if not order_db:
+					to_insert.append(order)
+
 			logging.info(
-				f'Fetched {len(omie_clients)} clients and {len(omie_products)} products from Omie.'
+				f'Fetched {total_items} orders from Omie. {to_insert} new orders to insert into the database.'
 			)
 
-			logging.info('Fetching existing customers and products from the database...')
-			db_customers = self.db_manager.get_customers()
-			db_customers_names = [c.get('NAME') for c in db_customers]
-			db_products = self.db_manager.get_product_types()
-			logging.info(
-				f'Fetched {len(db_customers)} customers and {len(db_products)} products from the database.'
-			)
-			# Insert clients that don't exist yet
-			to_insert_clients = [c for c in omie_clients if c not in db_customers_names]
-			logging.info(f'{len(to_insert_clients)} clients to insert into the database.')
-			for client in to_insert_clients:
-				self.db_manager.add_customer(client)
-
-			to_insert_products = []
-			to_update_products = []
-
-			for product in omie_products:
-				existing = next(
-					(p for p in db_products if p.get('name') == product.get('codigo')), None
+			for order in to_insert:
+				success, message = self.db_manager.add_product_order(
+					order_number=order.get('numero_pedido'),
+					client_name=order.get('nome_cliente'),
+					client_cnpj=order.get('cnpj_cliente'),
+					product_code=order.get('codigo_produto'),
+					product_description=order.get('descricao_produto'),
+					product_family=order.get('familia_produto'),
 				)
-				if existing:
-					if existing.get('description') != product.get('descricao'):
-						# Update only if description changed
-						self.db_manager.update_product_type(
-							product_type_id=existing.get('id'),
-							description=product.get('descricao'),
-						)
-						to_update_products.append(product)
-				else:
-					# Insert new product
-					self.db_manager.add_product_type(
-						name=product.get('codigo'),
-						description=product.get('descricao'),
-					)
-					to_insert_products.append(product)
+				if not success:
+					logging.error(f'Error inserting order {order.get("numero_pedido")}: {message}')
+					errors.append({'order_number': order.get('numero_pedido'), 'error': message})
+				logging.info(
+					f'Inserting order {order.get("numero_pedido")}: success={success}, message={message}'
+				)
 
 			return True, {
-				'to_insert_clients': len(to_insert_clients),
-				'to_insert_products': len(to_insert_products),
-				'to_update_products': len(to_update_products),
+				'all_orders_fetched': success,
+				'total_items_fetched': total_items,
+				'new_orders_inserted': len(to_insert),
+				'errors': errors,
 			}
 
 		except Exception as e:
-			logging.error(f'Error fetching clients from Omie: {e}')
-			return False, f'Error fetching clients from Omie: {e}'
+			logging.error(f'Error during Omie synchronization: {e}')
+			return False, str(e)

@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any
-
+from app.core import get_user
 from app.core import templates
 from app.core import logger
 
@@ -69,11 +69,7 @@ async def get_log_content() -> Dict[str, Any]:
 async def logs(request: Request):
 	return templates.TemplateResponse(
 		'pages/logs/main.html',
-		{
-			'request': request,
-			'title': 'Logs',
-			'alerts': [],
-		},
+		{'request': request, 'title': 'Logs', 'alerts': [], 'user': get_user(request)},
 		media_type='text/html; charset=utf-8',
 	)
 

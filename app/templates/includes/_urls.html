@@ -1,0 +1,151 @@
+<script>
+  const URLS = {
+    // Auth URLs
+    login: "{{ url_for('login') }}",
+    logout: "{{ url_for('logout') }}",
+    addUser: "{{ url_for('add_user') }}",
+    changePassword:
+      "{{ url_for('change_password', user_id=0, new_password='__PASSWORD__') }}".replace(
+        "/0/__PASSWORD__",
+        "/__USER_ID__/__PASSWORD__",
+      ),
+    changeRole:
+      "{{ url_for('change_role', user_id=0, new_role='__ROLE__') }}".replace(
+        "/0/__ROLE__",
+        "/__USER_ID__/__ROLE__",
+      ),
+
+    // Omie URLs
+    sincronizeOmie: "{{ url_for('sincronize_omie') }}",
+
+    // Orders URLs
+    getAllOrders: "{{ url_for('get_all_orders') }}",
+    getOrderById: "{{ url_for('get_order_by_id', order_id=0) }}".replace(
+      "/0",
+      "/__ORDER_ID__",
+    ),
+    getProductOrdersByIds:
+      "{{ url_for('get_product_orders_by_ids', ids='__IDS__') }}",
+    getProductOrdersByClient:
+      "{{ url_for('get_product_orders_by_client', client_name='__CLIENT_NAME__') }}",
+    getProductOrdersByCnpj:
+      "{{ url_for('get_product_orders_by_cnpj', cnpj='__CNPJ__') }}",
+    getProductOrdersByProductCode:
+      "{{ url_for('get_product_orders_by_product_code', product_code='__PRODUCT_CODE__') }}",
+    getProductOrdersByOrderNumber:
+      "{{ url_for('get_product_orders_by_order_number', order_number='__ORDER_NUMBER__') }}",
+    getProductOrdersByDate:
+      "{{ url_for('get_product_orders_by_date', start_date='__START_DATE__', end_date='__END_DATE__', field='__FIELD__') }}",
+    getProductOrdersByReader:
+      "{{ url_for('get_product_orders_by_reader', reader_id=0) }}".replace(
+        "/0",
+        "/__READER_ID__",
+      ),
+    getProductOrdersByReaderSerial:
+      "{{ url_for('get_product_orders_by_reader_serial', serial_number='__SERIAL_NUMBER__') }}",
+    getProductOrdersByReaderTypeName:
+      "{{ url_for('get_product_orders_by_reader_type_name', reader_type_name='__READER_TYPE_NAME__') }}",
+    addReaderToProductOrder:
+      "{{ url_for('add_reader_to_product_order', order_id=0, reader_id=0) }}".replace(
+        "/0/0",
+        "/__ORDER_ID__/__READER_ID__",
+      ),
+    addCommentToProductOrder:
+      "{{ url_for('add_comment_to_product_order', order_id=0, comment='__COMMENT__') }}".replace(
+        "/0/__COMMENT__",
+        "/__ORDER_ID__/__COMMENT__",
+      ),
+    productOrderMount:
+      "{{ url_for('product_order_mount', order_id=0) }}".replace(
+        "/0",
+        "/__ORDER_ID__",
+      ),
+    productOrderTest: "{{ url_for('product_order_test', order_id=0) }}".replace(
+      "/0",
+      "/__ORDER_ID__",
+    ),
+    productOrderShip: "{{ url_for('product_order_ship', order_id=0) }}".replace(
+      "/0",
+      "/__ORDER_ID__",
+    ),
+    productOrderActivate:
+      "{{ url_for('product_order_activate', order_id=0) }}".replace(
+        "/0",
+        "/__ORDER_ID__",
+      ),
+    getCustomers: "{{ url_for('get_customers') }}",
+    getCnpjs: "{{ url_for('get_cnpjs') }}",
+    getOrdersNumbers: "{{ url_for('get_orders_numbers') }}",
+    getProductCodes: "{{ url_for('get_product_codes') }}",
+
+    // Reader Types URLs
+    getReaderTypes: "{{ url_for('get_reader_types') }}",
+    getReaderTypeById:
+      "{{ url_for('get_reader_type_by_id', reader_type_id=0) }}".replace(
+        "/0",
+        "/__READER_TYPE_ID__",
+      ),
+    addReaderType: "{{ url_for('add_reader_type') }}",
+    updateReaderType:
+      "{{ url_for('update_reader_type', reader_type_id=0) }}".replace(
+        "/0",
+        "/__READER_TYPE_ID__",
+      ),
+    deleteReaderType:
+      "{{ url_for('delete_reader_type', reader_type_id=0) }}".replace(
+        "/0",
+        "/__READER_TYPE_ID__",
+      ),
+
+    // Readers URLs
+    addReader: "{{ url_for('add_reader') }}",
+    getReaders: "{{ url_for('get_readers') }}",
+    getReaderById: "{{ url_for('get_reader_by_id', reader_id=0) }}".replace(
+      "/0",
+      "/__READER_ID__",
+    ),
+    getAvailableReaders: "{{ url_for('get_available_readers') }}",
+    getReadersByType:
+      "{{ url_for('get_readers_by_type', reader_type_id=0) }}".replace(
+        "/0",
+        "/__READER_TYPE_ID__",
+      ),
+    getReadersByTypeName:
+      "{{ url_for('get_readers_by_type_name', reader_type_name='__READER_TYPE_NAME__') }}",
+    getReader: "{{ url_for('get_reader', reader_id=0) }}".replace(
+      "/0",
+      "/__READER_ID__",
+    ),
+    getReaderByHostname:
+      "{{ url_for('get_reader_by_hostname', hostname='__HOSTNAME__') }}",
+    getReaderBySerial:
+      "{{ url_for('get_reader_by_serial', serial_number='__SERIAL_NUMBER__') }}",
+    updateReader: "{{ url_for('update_reader', reader_id=0) }}".replace(
+      "/0",
+      "/__READER_ID__",
+    ),
+    deleteReader: "{{ url_for('delete_reader', reader_id=0) }}".replace(
+      "/0",
+      "/__READER_ID__",
+    ),
+
+    // Users URLs
+    getUsers: "{{ url_for('get_users') }}",
+    getUserById: "{{ url_for('get_user_by_id', user_id=0) }}".replace(
+      "/0",
+      "/__USER_ID__",
+    ),
+    getUserByUsername:
+      "{{ url_for('get_user_by_username', username='__USERNAME__') }}",
+    addUserEndpoint: "{{ url_for('add_user') }}",
+    updatePassword:
+      "{{ url_for('update_password', user_id=0, new_password='__NEW_PASSWORD__') }}".replace(
+        "/0/__NEW_PASSWORD__",
+        "/__USER_ID__/__NEW_PASSWORD__",
+      ),
+    deleteUser: "{{ url_for('delete_user', user_id=0) }}".replace(
+      "/0",
+      "/__USER_ID__",
+    ),
+  };
+</script>

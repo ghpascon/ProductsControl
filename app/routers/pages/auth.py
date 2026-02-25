@@ -10,6 +10,6 @@ router = APIRouter(prefix='', tags=['Pages'])
 async def auth(request: Request):
 	return templates.TemplateResponse(
 		'pages/auth/main.html',
-		{'request': request, 'title': 'Authentication', 'include_header': False},
+		{'request': request, 'title': 'Autenticação', 'include_header': False},
 		media_type='text/html; charset=utf-8',
 	)

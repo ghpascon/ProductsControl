@@ -13,7 +13,9 @@ router = APIRouter(prefix=router_prefix, tags=[router_prefix])
 	summary='Synchronize all data with Omie',
 )
 async def sincronize_omie():
-	success, data = controller.sincronize_omie()
+	success, data = await controller.sincronize_omie()
 	if success:
 		return JSONResponse(content=data)
-	return JSONResponse(content={'message': data}, status_code=400)
+	return JSONResponse(
+		content={'message': f'Erro ao sincronizar com Omie: {data}'}, status_code=400
+	)

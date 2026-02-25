@@ -16,6 +16,7 @@
         try {
           const resp = await fetch(url, { method: "POST" });
           const data = await resp.json();
+          console.log("Sync response:", data); // Debug log
           if (resp.ok) {
             this.success = true;
             this.result = data;
@@ -76,7 +77,7 @@
       x-transition:leave="transition ease-in duration-150"
       x-transition:leave-start="opacity-100 scale-100"
       x-transition:leave-end="opacity-0 scale-95"
-      class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4 text-center"
+      class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 text-center"
     >
       <!-- Loading State -->
       <template x-if="loading">
@@ -113,56 +114,108 @@
       <template x-if="!loading && success">
         <div class="flex flex-col items-center gap-4">
           <div
-            class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center"
+            class="w-14 h-14 rounded-full flex items-center justify-center"
+            :class="result && result.errors && result.errors.length > 0 ? 'bg-amber-100' : 'bg-emerald-100'"
           >
             <svg
-              class="w-7 h-7 text-emerald-600"
+              class="w-7 h-7"
+              :class="result && result.errors && result.errors.length > 0 ? 'text-amber-600' : 'text-emerald-600'"
               fill="none"
               stroke="currentColor"
               stroke-width="2.5"
               viewBox="0 0 24 24"
             >
               <path
+                x-show="!(result && result.errors && result.errors.length > 0)"
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 d="M5 13l4 4L19 7"
               />
+              <path
+                x-show="result && result.errors && result.errors.length > 0"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L5.34 16.5C4.57 17.333 5.532 19 7.072 19z"
+              />
             </svg>
           </div>
           <p class="text-gray-800 font-semibold text-lg">
-            Sincronização concluída!
+            <span
+              x-show="!(result && result.errors && result.errors.length > 0)"
+              >Sincronização concluída!</span
+            >
+            <span x-show="result && result.errors && result.errors.length > 0"
+              >Sincronização com avisos</span
+            >
           </p>
           <div
             class="w-full bg-gray-50 rounded-xl p-4 text-left text-sm text-gray-600 space-y-1"
           >
             <div class="flex justify-between">
-              <span>Clientes inseridos:</span>
+              <span>Sincronização completa:</span>
               <span
-                class="font-medium text-gray-800"
-                x-text="result.to_insert_clients"
+                class="font-medium"
+                :class="result.all_orders_fetched ? 'text-emerald-600' : 'text-amber-600'"
+                x-text="result.all_orders_fetched ? 'Sim' : 'Parcial'"
               ></span>
             </div>
             <div class="flex justify-between">
-              <span>Produtos inseridos:</span>
+              <span>Total de itens buscados:</span>
               <span
                 class="font-medium text-gray-800"
-                x-text="result.to_insert_products"
+                x-text="result.total_items_fetched || 0"
               ></span>
             </div>
             <div class="flex justify-between">
-              <span>Produtos atualizados:</span>
+              <span>Novos pedidos inseridos:</span>
               <span
                 class="font-medium text-gray-800"
-                x-text="result.to_update_products"
+                x-text="result.new_orders_inserted || 0"
               ></span>
             </div>
+            <template
+              x-if="result && result.errors && result.errors.length > 0"
+            >
+              <div class="pt-2 border-t border-gray-200">
+                <div class="flex justify-between mb-2">
+                  <span>Erros encontrados:</span>
+                  <span
+                    class="font-medium text-red-600"
+                    x-text="result.errors.length"
+                  ></span>
+                </div>
+                <div class="max-h-32 overflow-y-auto space-y-1">
+                  <template
+                    x-for="(error, index) in result.errors"
+                    :key="'error-' + index"
+                  >
+                    <div
+                      class="text-xs bg-red-50 border border-red-200 rounded px-2 py-1.5"
+                    >
+                      <div class="font-medium text-red-800">
+                        Pedido: <span x-text="error.order_number"></span>
+                      </div>
+                      <div class="text-red-600 mt-1" x-text="error.error"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
-          <button
-            @click="open = false"
-            class="mt-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
-          >
-            Fechar
-          </button>
+          <div class="flex gap-2">
+            <button
+              @click="open = false"
+              class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+            >
+              Fechar
+            </button>
+            <button
+              @click="console.log('Debug result:', result)"
+              class="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+            >
+              Debug
+            </button>
+          </div>
         </div>
       </template>
 

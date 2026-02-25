@@ -1,22 +1,4 @@
 ﻿{% extends "base.html" %} {% block content %}
-<script>
-  const VIEW_ORDER_URLS = {
-    getDecodedOrder: "{{ url_for('get_decoded_order', order_id=order_id) }}",
-    mount: "{{ url_for('product_order_mount',    order_id=order_id) }}",
-    test: "{{ url_for('product_order_test',     order_id=order_id) }}",
-    ship: "{{ url_for('product_order_ship',     order_id=order_id) }}",
-    activate: "{{ url_for('product_order_activate', order_id=order_id) }}",
-    addReaderToOrder:
-      "{{ url_for('add_reader_to_order', order_id=order_id, reader_id=0) }}".replace(
-        "/0",
-        "/__RID__",
-      ),
-    getAvailableReaders: "{{ url_for('get_available_readers') }}",
-    getDecodedReadersByIds:
-      "{{ url_for('get_decoded_readers_by_ids', reader_ids='__IDS__') }}",
-    back: "{{ url_for('index') }}",
-  };
-</script>
 
 <div class="min-h-screen p-6" x-data="viewOrder()" x-init="init()">
   <div class="max-w-3xl mx-auto space-y-5">
@@ -55,7 +37,8 @@
         <!-- Cabeçalho -->
         <div class="flex flex-wrap items-center gap-3">
           <h1 class="text-xl font-bold text-slate-800">
-            Pedido <span class="font-mono" x-text="'#' + order.id"></span>
+            Pedido
+            <span class="font-mono" x-text="'#' + order.order_number"></span>
           </h1>
           <span
             :class="statusBadgeClass()"
@@ -73,33 +56,66 @@
               <p
                 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
               >
+                Número do Pedido
+              </p>
+              <p
+                class="text-sm font-mono font-bold text-blue-600 mt-0.5"
+                x-text="order.order_number || '—'"
+              ></p>
+            </div>
+            <div>
+              <p
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+              >
                 Cliente
               </p>
               <p
                 class="text-sm font-semibold text-slate-800 mt-0.5"
-                x-text="order.client_name || '\u2014'"
+                x-text="order.client_name || '—'"
               ></p>
             </div>
             <div>
               <p
                 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
               >
-                Produto
+                CNPJ
+              </p>
+              <p
+                class="text-sm font-mono text-slate-600 mt-0.5"
+                x-text="order.client_cnpj || '—'"
+              ></p>
+            </div>
+            <div>
+              <p
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+              >
+                Código do Produto
+              </p>
+              <p
+                class="text-sm font-mono text-slate-700 mt-0.5"
+                x-text="order.product_code || '—'"
+              ></p>
+            </div>
+            <div class="sm:col-span-2">
+              <p
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+              >
+                Descrição do Produto
               </p>
               <p
                 class="text-sm font-semibold text-slate-800 mt-0.5"
-                x-text="order.product_type_name || '\u2014'"
+                x-text="order.product_description || '—'"
               ></p>
             </div>
             <div>
               <p
                 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
               >
-                Versão
+                Família do Produto
               </p>
               <p
-                class="text-sm font-mono font-semibold text-slate-700 mt-0.5"
-                x-text="order.version || '\u2014'"
+                class="text-sm text-slate-600 mt-0.5"
+                x-text="order.product_family || '—'"
               ></p>
             </div>
             <div>
@@ -109,54 +125,85 @@
                 Tipo de Leitor
               </p>
               <p
-                class="text-sm text-slate-700 mt-0.5"
-                x-text="order.reader_type_name || '\u2014'"
+                class="text-sm font-mono text-slate-600 mt-0.5"
+                x-text="order.reader_type_name || '—'"
               ></p>
             </div>
             <div>
               <p
                 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
               >
-                Serial
+                Serial do Leitor
               </p>
               <p
                 class="text-sm font-mono text-slate-600 mt-0.5"
-                x-text="order.reader_serial || '\u2014'"
+                x-text="order.reader_serial || '—'"
               ></p>
             </div>
             <div>
               <p
                 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
               >
-                Hostname
+                Hostname do Leitor
               </p>
               <p
                 class="text-sm font-mono text-slate-600 mt-0.5"
-                x-text="order.reader_hostname || '\u2014'"
+                x-text="order.reader_hostname || '—'"
               ></p>
             </div>
-            <div>
-              <p
-                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+          </div>
+        </div>
+
+        <!-- Comentários -->
+        <div
+          class="bg-white/90 border border-slate-200 rounded-2xl shadow-sm p-5"
+        >
+          <p
+            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4"
+          >
+            Comentários
+          </p>
+
+          <!-- Lista de comentários -->
+          <template x-if="parsedComments.length === 0">
+            <p class="text-sm text-slate-400 italic">Nenhum comentário</p>
+          </template>
+
+          <div x-show="parsedComments.length > 0" class="space-y-4">
+            <template x-for="comment in parsedComments" :key="comment.date">
+              <div
+                class="flex gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100"
               >
-                Criado em
-              </p>
-              <p
-                class="text-sm font-mono text-slate-500 mt-0.5"
-                x-text="formatDateTime(order.created_at)"
-              ></p>
-            </div>
-            <div>
-              <p
-                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-              >
-                Atualizado em
-              </p>
-              <p
-                class="text-sm font-mono text-slate-500 mt-0.5"
-                x-text="formatDateTime(order.updated_at)"
-              ></p>
-            </div>
+                <!-- Avatar -->
+                <div
+                  class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
+                >
+                  <span x-text="comment.user.charAt(0).toUpperCase()"></span>
+                </div>
+
+                <!-- Conteúdo -->
+                <div class="flex-1 min-w-0">
+                  <!-- Cabeçalho: usuário e data -->
+                  <div class="flex items-center gap-2 mb-1">
+                    <span
+                      class="text-sm font-semibold text-slate-800"
+                      x-text="comment.user"
+                    ></span>
+                    <span class="text-xs text-slate-500">•</span>
+                    <span
+                      class="text-xs text-slate-500 font-mono"
+                      x-text="comment.formattedDate"
+                    ></span>
+                  </div>
+
+                  <!-- Comentário -->
+                  <p
+                    class="text-sm text-slate-700 leading-relaxed"
+                    x-text="comment.text"
+                  ></p>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -206,9 +253,9 @@
                   x-text="step.date ? formatDate(step.date) : '\u2014'"
                 ></p>
                 <p
-                  x-show="step.done && step.by"
+                  x-show="step.done && step.username"
                   class="text-[10px] mt-0.5 text-center text-slate-500 font-mono"
-                  x-text="step.by ? 'Por: ' + step.by : ''"
+                  x-text="step.username || ''"
                 ></p>
               </div>
             </template>
@@ -275,6 +322,56 @@
           </div>
         </div>
 
+        <!-- Modal adicionar comentário -->
+        <div
+          x-show="showCommentModal"
+          x-transition:enter="transition ease-out duration-150"
+          x-transition:enter-start="opacity-0"
+          x-transition:enter-end="opacity-100"
+          x-transition:leave="transition ease-in duration-100"
+          x-transition:leave-start="opacity-100"
+          x-transition:leave-end="opacity-0"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          @click.self="showCommentModal = false; newComment = ''"
+          @keydown.escape.window="showCommentModal = false; newComment = ''"
+        >
+          <div
+            x-show="showCommentModal"
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4"
+          >
+            <h3 class="text-base font-bold text-slate-800 mb-1">
+              Adicionar Comentário
+            </h3>
+
+            <textarea
+              x-model="newComment"
+              rows="4"
+              placeholder="Digite seu comentário..."
+              class="w-full mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            ></textarea>
+
+            <div class="flex justify-end gap-2 mt-5">
+              <button
+                @click="showCommentModal = false; newComment = ''"
+                class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+
+              <button
+                @click="addComment()"
+                :disabled="!newComment.trim() || acting"
+                class="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Modal vincular leitor -->
         <div
           x-show="showReaderPicker"
@@ -302,46 +399,39 @@
               Selecione um leitor disponível para vincular a este pedido.
             </p>
 
-            <!-- Carregando -->
-            <div
-              x-show="loadingReaders"
-              class="flex items-center gap-2 text-sm text-slate-400 py-2"
-            >
-              <svg
-                class="w-4 h-4 animate-spin"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <template x-if="loadingReaders">
+              <div class="flex items-center gap-2 text-sm text-slate-400 py-2">
+                <svg
+                  class="w-4 h-4 animate-spin"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Carregando leitores...
+              </div>
+            </template>
+
+            <template x-if="!loadingReaders && readers.length === 0">
+              <p
+                class="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Carregando leitores...
-            </div>
+                Nenhum leitor disponível no momento.
+              </p>
+            </template>
 
-            <!-- Sem leitores -->
-            <p
-              x-show="!loadingReaders && readers.length === 0"
-              class="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4"
-            >
-              Nenhum leitor disponível no momento.
-            </p>
-
-            <!-- Select -->
-            <select
-              x-show="!loadingReaders && readers.length > 0"
-              x-model="selectedReaderId"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-5"
-            >
-              <option value="">Selecione um leitor...</option>
-              <template x-for="r in readers" :key="r.id">
-                <option :value="r.id" x-text="readerLabel(r)"></option>
-              </template>
-            </select>
+            <template x-if="!loadingReaders && readers.length > 0">
+              <div class="mb-5">
+                {{ combobox("rSearch", "selectedReaderId", "() => readers", "r\
+                => readerLabel(r)", "id", "Selecione um leitor") }}
+              </div>
+            </template>
 
             <div class="flex justify-end gap-2">
               <button
@@ -366,7 +456,7 @@
           class="bg-white/90 border border-slate-200 rounded-2xl shadow-sm p-5"
         >
           <p
-            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3"
+            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4"
           >
             Ações
           </p>
@@ -406,12 +496,18 @@
 
             <!-- Vincular Leitor -->
             <button
-              x-show="!order.reader_id"
               @click="openReaderPicker()"
               :disabled="acting"
               class="px-3 py-2 bg-slate-600 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all"
             >
               Vincular Leitor
+            </button>
+            <button
+              @click="showCommentModal = true"
+              :disabled="acting"
+              class="px-3 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all"
+            >
+              Adicionar Comentário
             </button>
             <div
               x-show="order.activated_at"
@@ -473,6 +569,8 @@
       readers: [],
       loadingReaders: false,
       selectedReaderId: "",
+      showCommentModal: false,
+      newComment: "",
 
       async init() {
         await this.load();
@@ -482,7 +580,11 @@
         this.loading = true;
         this.error = "";
         try {
-          const res = await fetch(VIEW_ORDER_URLS.getDecodedOrder);
+          const url = URLS.getOrderById.replace(
+            "__ORDER_ID__",
+            "{{ order_id }}",
+          );
+          const res = await fetch(url);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           this.order = await res.json();
         } catch (e) {
@@ -499,15 +601,39 @@
         this.acting = true;
         this.feedback = { msg: "", ok: true };
         try {
-          const res = await fetch(VIEW_ORDER_URLS[action], { method: "PUT" });
+          let url;
+          if (action === "mount")
+            url = URLS.productOrderMount.replace(
+              "__ORDER_ID__",
+              "{{ order_id }}",
+            );
+          else if (action === "test")
+            url = URLS.productOrderTest.replace(
+              "__ORDER_ID__",
+              "{{ order_id }}",
+            );
+          else if (action === "ship")
+            url = URLS.productOrderShip.replace(
+              "__ORDER_ID__",
+              "{{ order_id }}",
+            );
+          else if (action === "activate")
+            url = URLS.productOrderActivate.replace(
+              "__ORDER_ID__",
+              "{{ order_id }}",
+            );
+
+          const res = await fetch(url, { method: "PUT" });
           const data = await res.json();
           if (!res.ok) {
-            showAlert(data.error ?? "Erro ao executar a ação.", "error");
+            console.error("Erro detalhado:", data);
+            showAlert(`Erro: ${data.error || "Erro desconhecido"}`, "error");
           } else {
             showAlert(data.message ?? "Sucesso!", "success");
             await this.load();
           }
         } catch (e) {
+          console.error("Erro na requisição:", e);
           showAlert(`Erro inesperado: ${e.message}`, "error");
         } finally {
           this.acting = false;
@@ -519,23 +645,13 @@
         this.selectedReaderId = "";
         this.loadingReaders = true;
         try {
-          const res = await fetch(VIEW_ORDER_URLS.getAvailableReaders);
-          if (!res.ok) throw new Error();
-          const ids = await res.json();
-          if (!Array.isArray(ids) || ids.length === 0) {
-            this.readers = [];
-            return;
-          }
-          const idList = ids
-            .map((item) =>
-              typeof item === "object" && item !== null ? item.id : item,
-            )
-            .join(",");
-          const res2 = await fetch(
-            VIEW_ORDER_URLS.getDecodedReadersByIds.replace("__IDS__", idList),
-          );
-          if (res2.ok) this.readers = await res2.json();
-        } catch (_) {
+          const res = await fetch(URLS.getAvailableReaders);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const readers = await res.json();
+          console.log("Leitores carregados:", readers);
+          this.readers = Array.isArray(readers) ? readers : [];
+        } catch (e) {
+          console.error("Erro ao carregar leitores:", e);
           this.readers = [];
         } finally {
           this.loadingReaders = false;
@@ -547,19 +663,28 @@
         this.acting = true;
         this.showReaderPicker = false;
         try {
-          const url = VIEW_ORDER_URLS.addReaderToOrder.replace(
-            "__RID__",
-            this.selectedReaderId,
-          );
-          const res = await fetch(url, { method: "POST" });
+          const url = URLS.addReaderToProductOrder
+            .replace("__ORDER_ID__", "{{ order_id }}")
+            .replace("__READER_ID__", this.selectedReaderId);
+
+          console.log("URL de vincular leitor:", url);
+          const res = await fetch(url, { method: "PUT" });
           const data = await res.json();
+
+          console.log("Resposta do servidor:", { status: res.status, data });
+
           if (!res.ok) {
-            showAlert(data.error ?? "Erro ao vincular leitor.", "error");
+            console.error("Erro detalhado ao vincular leitor:", data);
+            showAlert(
+              `Erro ao vincular leitor: ${data.error || JSON.stringify(data)}`,
+              "error",
+            );
           } else {
             showAlert(data.message ?? "Leitor vinculado!", "success");
             await this.load();
           }
         } catch (e) {
+          console.error("Erro na requisição de vincular:", e);
           showAlert(`Erro inesperado: ${e.message}`, "error");
         } finally {
           this.acting = false;
@@ -572,7 +697,11 @@
         if (r.hostname) parts.push(r.hostname);
         if (r.serial_number) parts.push(r.serial_number);
         if (r.reader_type_name) parts.push(`(${r.reader_type_name})`);
-        return parts.length ? parts.join(" — ") : `Leitor #${r.id}`;
+        if (parts.length === 0) {
+          // Fallback para quando não temos informações completas
+          return `Leitor ${r.hostname || r.serial_number || "#" + (r.id || r)}`;
+        }
+        return parts.join(" — ");
       },
 
       statusLabel() {
@@ -605,7 +734,8 @@
             key: "pendente",
             label: "Criado",
             date: o.created_at,
-            by: o.created_by_username,
+            by: o.created_by,
+            username: o.created_by_username,
             done: true,
             current: false,
             icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
@@ -614,7 +744,8 @@
             key: "montado",
             label: "Montado",
             date: o.mounted_at,
-            by: o.mounted_by_username,
+            by: o.mounted_by,
+            username: o.mounted_by_username,
             done: !!o.mounted_at,
             current: !o.mounted_at,
             icon: "M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z",
@@ -623,7 +754,8 @@
             key: "testado",
             label: "Testado",
             date: o.tested_at,
-            by: o.tested_by_username,
+            by: o.tested_by,
+            username: o.tested_by_username,
             done: !!o.tested_at,
             current: !!o.mounted_at && !o.tested_at,
             icon: "M9 12l2 2 4-4M7 4a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H7z",
@@ -632,7 +764,8 @@
             key: "enviado",
             label: "Enviado",
             date: o.shipped_at,
-            by: o.shipped_by_username,
+            by: o.shipped_by,
+            username: o.shipped_by_username,
             done: !!o.shipped_at,
             current: !!o.tested_at && !o.shipped_at,
             icon: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4",
@@ -641,12 +774,63 @@
             key: "ativado",
             label: "Ativado",
             date: o.activated_at,
-            by: o.activated_by_username,
+            by: o.activated_by,
+            username: o.activated_by_username,
             done: !!o.activated_at,
             current: !!o.shipped_at && !o.activated_at,
             icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
           },
         ];
+      },
+
+      get parsedComments() {
+        if (!this.order?.comments) return [];
+
+        const comments = [];
+        const lines = this.order.comments.trim().split("\n");
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          // Pattern: YYYY-MM-DDTHH:mm:ss.ssssss - Usuario: Comentario
+          const match = line.match(
+            /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)\s*-\s*([^:]+):\s*(.+)$/,
+          );
+
+          if (match) {
+            const [, dateStr, user, text] = match;
+
+            try {
+              const date = new Date(dateStr);
+              const formattedDate = new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              }).format(date);
+
+              comments.push({
+                date: dateStr,
+                user: user.trim(),
+                text: text.trim(),
+                formattedDate,
+              });
+            } catch (e) {
+              // Se der erro na formatação, usa o formato original
+              comments.push({
+                date: dateStr,
+                user: user.trim(),
+                text: text.trim(),
+                formattedDate: dateStr,
+              });
+            }
+          }
+        }
+
+        // Retorna os comentários em ordem cronológica reversa (mais recentes primeiro)
+        return comments.reverse();
       },
 
       formatDate(value) {
@@ -677,6 +861,39 @@
           }).format(new Date(value));
         } catch (_) {
           return value;
+        }
+      },
+
+      async addComment() {
+        if (!this.newComment.trim()) return;
+
+        this.acting = true;
+        this.showCommentModal = false;
+
+        try {
+          const url = URLS.addCommentToProductOrder
+            .replace("__ORDER_ID__", "{{ order_id }}")
+            .replace("__COMMENT__", encodeURIComponent(this.newComment.trim()));
+
+          const res = await fetch(url, { method: "POST" });
+          const data = await res.json();
+
+          if (!res.ok) {
+            console.error("Erro ao adicionar comentário:", data);
+            showAlert(
+              `Erro ao adicionar comentário: ${data.error || JSON.stringify(data)}`,
+              "error",
+            );
+          } else {
+            showAlert(data.message ?? "Comentário adicionado!", "success");
+            this.newComment = "";
+            await this.load();
+          }
+        } catch (e) {
+          console.error("Erro na requisição de comentário:", e);
+          showAlert(`Erro inesperado: ${e.message}`, "error");
+        } finally {
+          this.acting = false;
         }
       },
     };

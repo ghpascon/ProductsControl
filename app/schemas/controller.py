@@ -18,4 +18,3 @@ class AddOrder(BaseModel):
 	reader_id: int | None = Field(
 		1, description='ID of the reader processing the order, must be greater than 0'
 	)
-	version: str = Field('v1.0.0', description='Version of the product being ordered')

@@ -1,29 +1,7 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %} 
+{% block content %}
 <!-- Main Layout Container -->
 <!-- Painel de Pedidos -->
-<script>
-  const API_URLS = {
-    getAllDecoded: "{{ url_for('get_decoded_orders') }}",
-    getDecodedByIds:
-      "{{ url_for('get_decoded_orders_by_ids', order_ids='__IDS__') }}",
-    getDecodedById: "{{ url_for('get_decoded_order', order_id=0) }}".replace(
-      "/0",
-      "/__ID__",
-    ),
-    filterByClient:
-      "{{ url_for('get_product_orders_by_client', customer_id='__ID__') }}",
-    filterByProductType:
-      "{{ url_for('get_product_orders_by_product_type', product_type_id='__ID__') }}",
-    filterByDate:
-      "{{ url_for('get_product_orders_by_date', start_date='__START__', end_date='__END__') }}",
-    getCustomers: "{{ url_for('get_customers') }}",
-    getProductTypes: "{{ url_for('get_product_types') }}",
-    viewOrder: "{{ url_for('view_order_page', order_id=0) }}".replace(
-      "/0",
-      "/__ID__",
-    ),
-  };
-</script>
 
 <div class="min-h-screen p-6" x-data="orderPanel()" x-init="init()">
   <!-- Barra de Filtros e Botão de Atualizar -->
@@ -35,9 +13,9 @@
       <div class="flex flex-wrap gap-2">
         <template x-for="tab in filterTabs" :key="tab.key">
           <button
-            @click="activeFilter = tab.key; resetFilterFields()"
+            @click="console.log('🔄 Mudando filtro para:', tab.key); if(tab.key === 'numero') console.log('📋 OrderNumbers ao ativar filtro numero:', orderNumbers); activeFilter = tab.key; resetFilterFields()"
             :class="activeFilter === tab.key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-            class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             x-text="tab.label"
           ></button>
         </template>
@@ -68,35 +46,6 @@
 
     <!-- Conteúdo do Card -->
     <div class="flex flex-wrap items-end gap-3">
-      <!-- Por ID -->
-      <div
-        x-show="activeFilter === 'id'"
-        x-transition
-        class="flex flex-wrap items-end gap-3"
-      >
-        <div class="flex-1 min-w-[160px]">
-          <label
-            class="block text-s font-semibold text-slate-500 uppercase mb-1"
-            >ID do Pedido</label
-          >
-          <input
-            type="number"
-            x-model="filter.orderId"
-            placeholder="ex: 42"
-            min="1"
-            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
-            @keydown.enter="applyFilter()"
-          />
-        </div>
-        <button
-          @click="applyFilter()"
-          :disabled="!filter.orderId"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
-        >
-          Buscar
-        </button>
-      </div>
-
       <!-- Por Cliente -->
       <div
         x-show="activeFilter === 'cliente'"
@@ -108,20 +57,84 @@
             class="block text-s font-semibold text-slate-500 uppercase mb-1"
             >Cliente</label
           >
-          {{ combobox("clientSearch", "filter.ClientId", "() => customers", "c
-          => c.ID + ' \u2014 ' + (c.NAME ?? 'Desconhecido')", "ID", "Selecione
-          um \ cliente") }}
+          {{ combobox("clientSearch", "filter.clientName", "() => customers", "c => c.client_name || c", "client_name", "Selecione um cliente") }}
         </div>
         <button
           @click="applyFilter()"
-          :disabled="!filter.ClientId"
+          :disabled="!filter.clientName"
           class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
         >
           Filtrar
         </button>
       </div>
 
-      <!-- Por Produto -->
+      <!-- Por CNPJ -->
+      <div
+        x-show="activeFilter === 'cnpj'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
+      >
+        <div class="flex-1 min-w-[200px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >CNPJ</label
+          >
+          {{ combobox("cnpjSearch", "filter.cnpj", "() => cnpjs.map(item => ({ value: item, label: item }))", "item => item.label || item", "value", "Selecione um CNPJ") }}
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.cnpj"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+        >
+          Filtrar
+        </button>
+      </div>
+
+      <!-- Por Número do Pedido -->
+      <div
+        x-show="activeFilter === 'numero'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
+      >
+        <div class="flex-1 min-w-[200px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Número do Pedido</label
+          >
+          {{ combobox("orderNumberSearch", "filter.orderNumber", "() => orderNumbers.map(item => ({ value: String(item), label: String(item) }))", "item => item.label || item", "value", "Selecione um número de pedido") }}
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.orderNumber"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+        >
+          Filtrar
+        </button>
+      </div>
+
+      <!-- Por Código de Produto -->
+      <div
+        x-show="activeFilter === 'codigo'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
+      >
+        <div class="flex-1 min-w-[200px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Código do Produto</label
+          >
+          {{ combobox("productCodeSearch", "filter.productCode", "() => productCodes.map(item => ({ value: item, label: item }))", "item => item.label || item", "value", "Selecione um código de produto") }}
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.productCode"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+        >
+          Filtrar
+        </button>
+      </div>
+
+      <!-- Por Tipo de Leitor -->
       <div
         x-show="activeFilter === 'tipo'"
         x-transition
@@ -130,15 +143,41 @@
         <div class="flex-1 min-w-[200px]">
           <label
             class="block text-s font-semibold text-slate-500 uppercase mb-1"
-            >Produto</label
+            >Tipo de Leitor</label
           >
-          {{ combobox("typeSearch", "filter.productTypeId", "() =>
-          productTypes", "pt => pt.id + ' \u2014 ' + pt.name", "id", "Selecione
-          um produto") }}
+          {{ combobox("readerTypeSearch", "filter.readerTypeId", "() => readerTypes", "rt => rt.id + ' — ' + rt.name", "id", "Selecione um tipo de leitor") }}
         </div>
         <button
           @click="applyFilter()"
-          :disabled="!filter.productTypeId"
+          :disabled="!filter.readerTypeId"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
+        >
+          Filtrar
+        </button>
+      </div>
+
+      <!-- Por Leitor -->
+      <div
+        x-show="activeFilter === 'leitor'"
+        x-transition
+        class="flex flex-wrap items-end gap-3"
+      >
+        <div class="flex-1 min-w-[200px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Serial do Leitor</label
+          >
+          <input
+            type="text"
+            x-model="filter.readerId"
+            placeholder="Digite o serial do leitor"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+            @keydown.enter="applyFilter()"
+          />
+        </div>
+        <button
+          @click="applyFilter()"
+          :disabled="!filter.readerId"
           class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all"
         >
           Filtrar
@@ -151,6 +190,22 @@
         x-transition
         class="flex flex-wrap items-end gap-3"
       >
+        <div class="flex-1 min-w-[160px]">
+          <label
+            class="block text-s font-semibold text-slate-500 uppercase mb-1"
+            >Campo de Data</label
+          >
+          <select
+            x-model="filter.dateField"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="created_at">Data de Criação</option>
+            <option value="mounted_at">Data de Montagem</option>
+            <option value="tested_at">Data de Teste</option>
+            <option value="shipped_at">Data de Envio</option>
+            <option value="activated_at">Data de Ativação</option>
+          </select>
+        </div>
         <div class="flex-1 min-w-[160px]">
           <label
             class="block text-s font-semibold text-slate-500 uppercase mb-1"
@@ -190,11 +245,43 @@
         Exibindo todos os pedidos — use as abas acima para filtrar.
       </div>
 
-      <p
+      <div
         x-show="error"
-        x-text="error"
-        class="mt-3 text-sm text-red-500 font-medium"
-      ></p>
+        class="w-full mt-4 p-4 bg-red-50 border border-red-200 rounded-xl"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-red-500 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p class="text-sm text-red-700 font-medium" x-text="error"></p>
+          </div>
+          <button
+            @click="error = ''"
+            class="text-red-400 hover:text-red-600 transition-colors"
+            title="Fechar"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -328,13 +415,11 @@
           <tr
             class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest"
           >
-            <th class="px-4 py-3 text-left font-bold">Id</th>
+            <th class="px-4 py-3 text-left font-bold">Nº Pedido</th>
             <th class="px-4 py-3 text-left font-bold">Cliente</th>
-            <th class="px-4 py-3 text-left font-bold">Produto</th>
-            <th class="px-4 py-3 text-left font-bold w-16">Versão</th>
-            <th class="px-4 py-3 text-left font-bold">Leitor</th>
-            <th class="px-4 py-3 text-left font-bold">Serial</th>
-            <th class="px-4 py-3 text-left font-bold">Hostname</th>
+            <th class="px-4 py-3 text-left font-bold">Código Produto</th>
+            <th class="px-4 py-3 text-left font-bold">Tipo Leitor</th>
+            <th class="px-4 py-3 text-left font-bold">Serial Leitor</th>
             <th class="px-4 py-3 text-left font-bold w-24">Criado</th>
             <th class="px-4 py-3 text-left font-bold w-24">Montado</th>
             <th class="px-4 py-3 text-left font-bold w-24">Testado</th>
@@ -347,37 +432,32 @@
         <tbody>
           <template x-for="order in filteredOrders" :key="order.id">
             <tr
-              @click="window.location.href = API_URLS.viewOrder.replace('__ID__', order.id)"
+              @click="window.location.href = '{{ url_for("view_order_page", order_id=0) }}'.replace('/0', '/' + order.id)"
               class="border-b border-slate-100 last:border-0 hover:bg-blue-50/50 cursor-pointer transition-colors duration-150"
             >
               <td
-                class="px-4 py-3 font-semibold text-slate-800"
-                x-text="order.id || '—'"
+                class="px-4 py-3 font-mono text-blue-600"
+                x-text="order.order_number || '—'"
               ></td>
               <td
                 class="px-4 py-3 font-semibold text-slate-800"
                 x-text="order.client_name || '—'"
               ></td>
               <td
+                class="px-4 py-3 text-slate-600 font-mono"
+                x-text="order.product_code || '—'"
+              ></td>
+              <td
                 class="px-4 py-3 text-slate-600"
-                x-text="order.product_type_name || '—'"
+                x-text="(order.reader_type_name || order.reader_type?.name || '—')"
+                :title="order.reader_type_name ? `ID: ${order.reader_type_id || 'N/A'}` : ''"
               ></td>
               <td
-                class="px-4 py-3 text-s font-mono text-slate-500 whitespace-nowrap"
-                x-text="order.version || '—'"
+                class="px-4 py-3 text-slate-600 font-mono"
+                x-text="(order.reader_serial || order.reader?.serial_number || '—')"
+                :title="order.reader_id ? `Reader ID: ${order.reader_id}` : ''"
               ></td>
-              <td
-                class="px-4 py-3 text-s text-slate-600"
-                x-text="order.reader_type_name || '—'"
-              ></td>
-              <td
-                class="px-4 py-3 text-s font-mono text-slate-400"
-                x-text="order.reader_serial || '—'"
-              ></td>
-              <td
-                class="px-4 py-3 text-s text-slate-600"
-                x-text="order.reader_hostname || '—'"
-              ></td>
+
               <td
                 class="px-4 py-3 text-s text-slate-400 whitespace-nowrap"
                 x-text="formatDate(order.created_at)"
@@ -437,23 +517,34 @@
     return {
       orders: [],
       customers: [],
-      productTypes: [],
+      cnpjs: [],
+      orderNumbers: [],
+      productCodes: [],
+      readerTypes: [],
+      readers: [],
       loading: true,
       error: "",
       activeFilter: "todos",
       statusFilter: "",
       filter: {
-        orderId: "",
-        ClientId: "",
-        productTypeId: "",
+        clientName: "",
+        cnpj: "",
+        orderNumber: "",
+        productCode: "",
+        readerTypeId: "",
+        readerId: "",
         startDate: "",
         endDate: "",
+        dateField: "created_at",
       },
       filterTabs: [
         { key: "todos", label: "Todos" },
-        { key: "id", label: "Por ID" },
         { key: "cliente", label: "Por Cliente" },
-        { key: "tipo", label: "Por Produto" },
+        { key: "cnpj", label: "Por CNPJ" },
+        { key: "numero", label: "Por Nº Pedido" },
+        { key: "codigo", label: "Por Código" },
+        { key: "tipo", label: "Por Tipo Leitor" },
+        { key: "leitor", label: "Por Leitor" },
         { key: "data", label: "Por Data" },
       ],
       statusTabs: [
@@ -486,21 +577,45 @@
         },
       ],
 
+      // Função para normalizar dados dos pedidos
+      normalizeOrders(orders) {
+        if (!Array.isArray(orders)) return [];
+        
+        return orders.map(order => ({
+          ...order,
+          // Garantir que os campos do leitor estejam sempre presentes
+          reader_serial: order.reader_serial || order.reader?.serial_number || null,
+          reader_type_name: order.reader_type_name || order.reader_type?.name || null,
+          reader_id: order.reader_id || order.reader?.id || null,
+          reader_type_id: order.reader_type_id || order.reader_type?.id || null,
+        }));
+      },
+
       async init() {
+        console.log('🚀 Iniciando init() do orderPanel...');
         await Promise.all([
           this.loadOrders(),
           this.loadCustomers(),
-          this.loadProductTypes(),
+          this.loadCnpjs(),
+          this.loadOrderNumbers(),
+          this.loadProductCodes(),
+          this.loadReaderTypes(),
+          this.loadReaders(),
         ]);
+        console.log('✅ Init concluído. OrderNumbers final:', this.orderNumbers);
       },
 
       resetFilterFields() {
         this.filter = {
-          orderId: "",
-          ClientId: "",
-          productTypeId: "",
+          clientName: "",
+          cnpj: "",
+          orderNumber: "",
+          productCode: "",
+          readerTypeId: "",
+          readerId: "",
           startDate: "",
           endDate: "",
+          dateField: "created_at",
         };
         this.error = "";
         if (this.activeFilter === "todos") this.loadOrders();
@@ -509,26 +624,47 @@
       async applyFilter() {
         this.error = "";
         if (this.activeFilter === "todos") return this.loadOrders();
-        if (this.activeFilter === "id") {
-          if (!this.filter.orderId) {
-            this.error = "Informe um ID.";
-            return;
-          }
-          return this.loadOrderById(this.filter.orderId);
-        }
         if (this.activeFilter === "cliente") {
-          if (!this.filter.ClientId) {
+          if (!this.filter.clientName) {
             this.error = "Selecione um cliente.";
             return;
           }
-          return this.loadOrdersByClient(this.filter.ClientId);
+          return this.loadOrdersByClient(this.filter.clientName);
         }
-        if (this.activeFilter === "tipo") {
-          if (!this.filter.productTypeId) {
-            this.error = "Selecione um tipo de produto.";
+        if (this.activeFilter === "cnpj") {
+          if (!this.filter.cnpj) {
+            this.error = "Selecione um CNPJ.";
             return;
           }
-          return this.loadOrdersByProductType(this.filter.productTypeId);
+          return this.loadOrdersByCnpj(this.filter.cnpj);
+        }
+        if (this.activeFilter === "numero") {
+          if (!this.filter.orderNumber) {
+            this.error = "Selecione um número de pedido.";
+            return;
+          }
+          return this.loadOrdersByOrderNumber(this.filter.orderNumber);
+        }
+        if (this.activeFilter === "codigo") {
+          if (!this.filter.productCode) {
+            this.error = "Selecione um código de produto.";
+            return;
+          }
+          return this.loadOrdersByProductCode(this.filter.productCode);
+        }
+        if (this.activeFilter === "tipo") {
+          if (!this.filter.readerTypeId) {
+            this.error = "Selecione um tipo de leitor.";
+            return;
+          }
+          return this.loadOrdersByReaderType(this.filter.readerTypeId);
+        }
+        if (this.activeFilter === "leitor") {
+          if (!this.filter.readerId) {
+            this.error = "Digite o serial do leitor.";
+            return;
+          }
+          return this.loadOrdersByReader(this.filter.readerId);
         }
         if (this.activeFilter === "data") {
           if (!this.filter.startDate || !this.filter.endDate) {
@@ -538,36 +674,41 @@
           return this.loadOrdersByDate(
             this.filter.startDate,
             this.filter.endDate,
+            this.filter.dateField,
           );
         }
       },
 
-      async loadOrderById(orderId) {
-        this.loading = true;
-        try {
-          const res = await fetch(
-            API_URLS.getDecodedById.replace("__ID__", orderId),
-          );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const order = await res.json();
-          this.orders = order && order.id ? [order] : [];
-          if (this.orders.length === 0)
-            this.error = `Pedido #${orderId} não encontrado.`;
-        } catch (e) {
-          this.error = `Erro ao buscar pedido: ${e.message}`;
-          this.orders = [];
-        } finally {
-          this.loading = false;
-        }
-      },
+
 
       async loadOrders() {
         this.loading = true;
+        this.error = "";
         try {
-          const res = await fetch(API_URLS.getAllDecoded);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          this.orders = await res.json();
+          const res = await fetch(URLS.getAllOrders);
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          console.log('📋 Dados carregados - total de pedidos:', this.orders.length);
+          if (this.orders.length > 0) {
+            console.log('📄 Exemplo de pedido:', this.orders[0]);
+            console.log('🔍 Campos do leitor no primeiro pedido:', {
+              reader_serial: this.orders[0].reader_serial,
+              reader_type_name: this.orders[0].reader_type_name,
+              reader_id: this.orders[0].reader_id,
+              reader_type_id: this.orders[0].reader_type_id,
+              reader: this.orders[0].reader,
+              reader_type: this.orders[0].reader_type
+            });
+          }
+          if (this.orders.length === 0) {
+            this.error = "Nenhum pedido encontrado.";
+          }
         } catch (e) {
+          console.error('Erro ao carregar pedidos:', e);
           this.error = `Erro ao carregar pedidos: ${e.message}`;
           this.orders = [];
         } finally {
@@ -575,90 +716,330 @@
         }
       },
 
-      async loadOrdersByClient(ClientId) {
+      async loadOrdersByClient(clientName) {
         this.loading = true;
+        this.error = "";
         try {
           const res = await fetch(
-            API_URLS.filterByClient.replace("__ID__", ClientId),
+            URLS.getProductOrdersByClient.replace(
+              "__CLIENT_NAME__",
+              encodeURIComponent(clientName),
+            ),
           );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          await this.fetchDecodedByList(await res.json());
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado para o cliente: ${clientName}`;
+          }
         } catch (e) {
+          console.error('Erro ao filtrar por cliente:', e);
           this.error = `Erro ao filtrar por cliente: ${e.message}`;
           this.orders = [];
+        } finally {
           this.loading = false;
         }
       },
 
-      async loadOrdersByProductType(productTypeId) {
+      async loadOrdersByCnpj(cnpj) {
         this.loading = true;
+        this.error = "";
         try {
           const res = await fetch(
-            API_URLS.filterByProductType.replace("__ID__", productTypeId),
+            URLS.getProductOrdersByCnpj.replace(
+              "__CNPJ__",
+              encodeURIComponent(cnpj.replace(/\//g, "|"))
+            ),
           );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          await this.fetchDecodedByList(await res.json());
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado para o CNPJ: ${cnpj}`;
+          }
         } catch (e) {
-          this.error = `Erro ao filtrar por tipo: ${e.message}`;
+          console.error('Erro ao filtrar por CNPJ:', e);
+          this.error = `Erro ao filtrar por CNPJ: ${e.message}`;
           this.orders = [];
+        } finally {
           this.loading = false;
         }
       },
 
-      async loadOrdersByDate(startDate, endDate) {
+      async loadOrdersByOrderNumber(orderNumber) {
         this.loading = true;
+        this.error = "";
+        console.log('Buscando pedidos por número:', orderNumber);
+        try {
+          const res = await fetch(
+            URLS.getProductOrdersByOrderNumber.replace(
+              "__ORDER_NUMBER__",
+              encodeURIComponent(orderNumber),
+            ),
+          );
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado com número: ${orderNumber}`;
+          }
+        } catch (e) {
+          console.error('Erro ao filtrar por número do pedido:', e);
+          this.error = `Erro ao filtrar por número do pedido: ${e.message}`;
+          this.orders = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByProductCode(productCode) {
+        this.loading = true;
+        this.error = "";
+        try {
+          const res = await fetch(
+            URLS.getProductOrdersByProductCode.replace(
+              "__PRODUCT_CODE__",
+              encodeURIComponent(productCode),
+            ),
+          );
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado para o código de produto: ${productCode}`;
+          }
+        } catch (e) {
+          console.error('Erro ao filtrar por código de produto:', e);
+          this.error = `Erro ao filtrar por código de produto: ${e.message}`;
+          this.orders = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByReaderType(readerTypeId) {
+        this.loading = true;
+        this.error = "";
+        try {
+          // Encontrar o tipo de leitor pelo ID para obter o nome
+          const readerType = this.readerTypes.find(rt => rt.id == readerTypeId);
+          if (!readerType) {
+            this.orders = [];
+            this.error = "Tipo de leitor não encontrado.";
+            return;
+          }
+
+          // Usar a nova rota direta que busca pedidos por nome do tipo de leitor
+          const res = await fetch(
+            URLS.getProductOrdersByReaderTypeName.replace("__READER_TYPE_NAME__", encodeURIComponent(readerType.name)),
+          );
+          
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado para o tipo de leitor: ${readerType.name}`;
+          }
+        } catch (e) {
+          console.error('Erro ao filtrar por tipo de leitor:', e);
+          this.error = `Erro ao filtrar por tipo de leitor: ${e.message}`;
+          this.orders = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByReader(readerId) {
+        this.loading = true;
+        this.error = "";
+        try {
+          const res = await fetch(
+            URLS.getProductOrdersByReaderSerial.replace("__SERIAL_NUMBER__", encodeURIComponent(readerId)),
+          );
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado para o leitor: ${readerId}`;
+          }
+        } catch (e) {
+          console.error('Erro ao filtrar por leitor:', e);
+          this.error = `Erro ao filtrar por leitor: ${e.message}`;
+          this.orders = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async loadOrdersByDate(startDate, endDate, dateField) {
+        this.loading = true;
+        this.error = "";
         try {
           // date input gives "YYYY-MM-DD"; enviar início e fim do dia
-          const url = API_URLS.filterByDate
+          const url = URLS.getProductOrdersByDate
             .replace(
-              "__START__",
+              "__START_DATE__",
               encodeURIComponent(
                 new Date(startDate + "T00:00:00").toISOString(),
               ),
             )
             .replace(
-              "__END__",
+              "__END_DATE__",
               encodeURIComponent(new Date(endDate + "T23:59:59").toISOString()),
-            );
+            )
+            .replace("__FIELD__", dateField);
+            
           const res = await fetch(url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          await this.fetchDecodedByList(await res.json());
+          if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Erro ${res.status}: ${errorData}`);
+          }
+          const data = await res.json();
+          this.orders = this.normalizeOrders(data);
+          if (this.orders.length === 0) {
+            this.error = `Nenhum pedido encontrado entre ${startDate} e ${endDate} para o campo ${dateField}`;
+          }
         } catch (e) {
+          console.error('Erro ao filtrar por data:', e);
           this.error = `Erro ao filtrar por data: ${e.message}`;
           this.orders = [];
+        } finally {
           this.loading = false;
         }
-      },
-
-      async fetchDecodedByList(data) {
-        if (!Array.isArray(data) || data.length === 0) {
-          this.orders = [];
-          this.loading = false;
-          return;
-        }
-        const ids = data.map((item) =>
-          typeof item === "object" && item !== null ? item.id : item,
-        );
-        const res = await fetch(
-          API_URLS.getDecodedByIds.replace("__IDS__", ids.join(",")),
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        this.orders = await res.json();
-        this.loading = false;
       },
 
       async loadCustomers() {
         try {
-          const res = await fetch(API_URLS.getCustomers);
-          if (res.ok) this.customers = await res.json();
-        } catch (_) {}
+          const res = await fetch(URLS.getCustomers);
+          if (!res.ok) {
+            console.warn('Erro ao carregar clientes:', res.status);
+            this.customers = [];
+            return;
+          }
+          const customersData = await res.json();
+          if (Array.isArray(customersData)) {
+            this.customers = customersData.map((c) => ({
+              client_name: c.client_name || c.name || c,
+              value: c.client_name || c.name || c,
+            }));
+          } else {
+            console.warn('Dados de clientes inválidos:', customersData);
+            this.customers = [];
+          }
+        } catch (e) {
+          console.error('Erro ao carregar clientes:', e);
+          this.customers = [];
+        }
       },
 
-      async loadProductTypes() {
+      async loadCnpjs() {
         try {
-          const res = await fetch(API_URLS.getProductTypes);
-          if (res.ok) this.productTypes = await res.json();
-        } catch (_) {}
+          const res = await fetch(URLS.getCnpjs);
+          if (!res.ok) {
+            console.warn('Erro ao carregar CNPJs:', res.status);
+            this.cnpjs = [];
+            return;
+          }
+          const data = await res.json();
+          this.cnpjs = Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error('Erro ao carregar CNPJs:', e);
+          this.cnpjs = [];
+        }
+      },
+
+      async loadOrderNumbers() {
+        console.log('🔄 Iniciando carregamento de números de pedido...');
+        try {
+          console.log('🌐 URL:', URLS.getOrdersNumbers);
+          const res = await fetch(URLS.getOrdersNumbers);
+          console.log('📡 Response status:', res.status, res.ok);
+          
+          if (!res.ok) {
+            console.error('❌ Erro na requisição:', res.status, res.statusText);
+            this.orderNumbers = [];
+            return;
+          }
+          
+          const data = await res.json();
+          console.log('📦 Dados recebidos da API:', data);
+          console.log('📦 Tipo dos dados:', typeof data, 'É array:', Array.isArray(data));
+          
+          this.orderNumbers = Array.isArray(data) ? data : [];
+          console.log('✅ OrderNumbers definido:', this.orderNumbers);
+          console.log('📊 Quantidade de itens:', this.orderNumbers.length);
+        } catch (error) {
+          console.error('💥 Erro ao carregar order numbers:', error);
+          this.orderNumbers = [];
+        }
+      },
+
+      async loadProductCodes() {
+        try {
+          const res = await fetch(URLS.getProductCodes);
+          if (!res.ok) {
+            console.warn('Erro ao carregar códigos de produto:', res.status);
+            this.productCodes = [];
+            return;
+          }
+          const data = await res.json();
+          this.productCodes = Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error('Erro ao carregar códigos de produto:', e);
+          this.productCodes = [];
+        }
+      },
+
+      async loadReaderTypes() {
+        try {
+          const res = await fetch(URLS.getReaderTypes);
+          if (!res.ok) {
+            console.warn('Erro ao carregar tipos de leitor:', res.status);
+            this.readerTypes = [];
+            return;
+          }
+          const data = await res.json();
+          this.readerTypes = Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error('Erro ao carregar tipos de leitor:', e);
+          this.readerTypes = [];
+        }
+      },
+
+      async loadReaders() {
+        try {
+          const res = await fetch(URLS.getReaders);
+          if (!res.ok) {
+            console.warn('Erro ao carregar leitores:', res.status);
+            this.readers = [];
+            return;
+          }
+          const data = await res.json();
+          this.readers = Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error('Erro ao carregar leitores:', e);
+          this.readers = [];
+        }
       },
 
       get stats() {
